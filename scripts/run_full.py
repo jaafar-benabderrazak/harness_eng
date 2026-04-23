@@ -14,7 +14,8 @@ from harness_eng.trace_viewer import build_viewer
 
 def main() -> int:
     p = argparse.ArgumentParser()
-    p.add_argument("--seeds", type=int, default=1)
+    p.add_argument("--seeds", type=int, default=3,
+                   help="Seeds per cell (default 3; Wilson CIs are brittle below 3)")
     p.add_argument("--yes", action="store_true", help="Skip cost-confirmation prompt.")
     p.add_argument("--harnesses", nargs="+", default=list(HARNESSES.keys()))
     args = p.parse_args()

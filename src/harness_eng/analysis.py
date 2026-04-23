@@ -4,6 +4,7 @@ and an auto-drafted markdown article.
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -14,6 +15,21 @@ import pandas as pd  # noqa: E402
 
 from .config import CONFIG, RESULTS_DIR  # noqa: E402
 from .pricing import cost_usd  # noqa: E402
+
+
+def wilson_ci(successes: int, trials: int, z: float = 1.96) -> tuple[float, float]:
+    """Wilson score interval for a binomial proportion.
+
+    Bounded to [0, 1] by construction — preferable to Wald at small N.
+    Returns (low, high); for trials=0 returns (0.0, 1.0) (maximally uninformative).
+    """
+    if trials <= 0:
+        return (0.0, 1.0)
+    p = successes / trials
+    denom = 1 + z * z / trials
+    centre = (p + z * z / (2 * trials)) / denom
+    half = (z / denom) * math.sqrt(p * (1 - p) / trials + z * z / (4 * trials * trials))
+    return (max(0.0, centre - half), min(1.0, centre + half))
 
 
 @dataclass
@@ -39,7 +55,8 @@ def aggregate(df: pd.DataFrame) -> Aggregates:
     per_harness = (
         df.groupby("harness")
         .agg(
-            tasks=("task_id", "count"),
+            trials=("task_id", "count"),
+            successes=("success", "sum"),
             success_rate=("success", "mean"),
             field_accuracy=("field_accuracy", "mean"),
             input_tokens=("input_tokens", "sum"),
@@ -51,18 +68,31 @@ def aggregate(df: pd.DataFrame) -> Aggregates:
         .reset_index()
         .sort_values("success_rate", ascending=False)
     )
+    cis = [wilson_ci(int(s), int(t)) for s, t in zip(per_harness["successes"], per_harness["trials"])]
+    per_harness["ci_low"] = [c[0] for c in cis]
+    per_harness["ci_high"] = [c[1] for c in cis]
+    per_harness["cost_per_success_usd"] = [
+        (c / s) if s > 0 else float("nan")
+        for c, s in zip(per_harness["cost_usd"], per_harness["successes"])
+    ]
     return Aggregates(df_rows=df, df_harness=per_harness)
 
 
 def frontier_chart(agg: Aggregates, out: Path) -> None:
     df = agg.df_harness
     fig, ax = plt.subplots(figsize=(7, 5))
-    ax.scatter(df["cost_usd"], df["success_rate"], s=80)
+    yerr_low = (df["success_rate"] - df["ci_low"]).clip(lower=0)
+    yerr_high = (df["ci_high"] - df["success_rate"]).clip(lower=0)
+    ax.errorbar(
+        df["cost_usd"], df["success_rate"],
+        yerr=[yerr_low, yerr_high],
+        fmt="o", capsize=4, markersize=8, elinewidth=1,
+    )
     for _, row in df.iterrows():
         ax.annotate(row["harness"], (row["cost_usd"], row["success_rate"]),
                     xytext=(6, 6), textcoords="offset points")
     ax.set_xlabel("Cost per run matrix (USD)")
-    ax.set_ylabel("Task success rate")
+    ax.set_ylabel("Task success rate (Wilson 95% CI)")
     ax.set_title(f"Success vs cost across harnesses — model frozen at {CONFIG.model.name}")
     ax.grid(alpha=0.3)
     ax.set_ylim(-0.05, 1.05)

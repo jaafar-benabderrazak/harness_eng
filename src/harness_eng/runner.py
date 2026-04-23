@@ -74,7 +74,7 @@ def _result_row(hr: HarnessResult, expected: dict[str, str]) -> dict:
 def run_matrix(
     harness_names: Iterable[str],
     tasks: list[Task] | None = None,
-    seeds: int = 1,
+    seeds: int = 3,
     run_dir: Path | None = None,
 ) -> Path:
     check_freeze_gate()
