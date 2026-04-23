@@ -1,8 +1,8 @@
 # Harness Freeze Manifest
 
 **Freeze date:** 2026-04-23
-**Freeze commit SHA:** `e777bfccbc1c22b679e1088802b8b0a5f442a5ed`
-**Git tag:** `harnesses-frozen` (created on the commit that adds this file; see commit following this one)
+**Freeze commit SHA:** resolve with `git rev-parse harnesses-frozen` (tag pins an exact commit; self-referencing the SHA in this file is a chicken-and-egg problem, so the tag is the source of truth)
+**Git tag:** `harnesses-frozen`
 
 ## Why this exists
 
