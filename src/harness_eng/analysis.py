@@ -216,13 +216,22 @@ def summarize_traces(traces_dir: Path | None = None) -> TraceSummary:
     )
 
 
+def _rel(p: Path) -> str:
+    """Path relative to repo root (parent of src/) for portable article links."""
+    try:
+        repo_root = Path(__file__).resolve().parents[2]
+        return str(p.resolve().relative_to(repo_root)).replace("\\", "/")
+    except (ValueError, OSError):
+        return str(p).replace("\\", "/")
+
+
 def _failure_section(ts: TraceSummary) -> str:
     """Render a pre-populated failure-mode section from trace scan."""
     if not ts.stop_reasons:
         return "*No traces found — run `scripts/run_full.py` to populate `traces/`.*"
     lines = ["### Stop-reason distribution per harness", ""]
-    lines.append("| harness | " + " | ".join(sorted({r for c in ts.stop_reasons.values() for r in c})) + " |")
     reasons = sorted({r for c in ts.stop_reasons.values() for r in c})
+    lines.append("| harness | " + " | ".join(reasons) + " |")
     lines.append("|" + "|".join(["---"] * (len(reasons) + 1)) + "|")
     for harness in sorted(ts.stop_reasons):
         c = ts.stop_reasons[harness]
@@ -237,10 +246,10 @@ def _failure_section(ts: TraceSummary) -> str:
         lt = ts.longest_turn_count.get(harness)
         if me:
             t, p, tok = me
-            lines.append(f"- **{harness}** most expensive cell: `{t}` — {tok:,} tokens — `{p}`")
+            lines.append(f"- **{harness}** most expensive cell: `{t}` — {tok:,} tokens — `{_rel(p)}`")
         if lt and (not me or lt[1] != me[1]):
             t, p, tr = lt
-            lines.append(f"- **{harness}** longest trace: `{t}` — {tr} model turns — `{p}`")
+            lines.append(f"- **{harness}** longest trace: `{t}` — {tr} model turns — `{_rel(p)}`")
 
     failing = {h: v for h, v in ts.failing_cells.items() if v}
     if failing:
