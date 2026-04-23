@@ -81,6 +81,8 @@ class PlanExecuteHarness(Harness):
                 name = tu["name"]
                 args = tu.get("input", {}) or {}
                 if name == "submit_answer":
+                    if "code" in args:
+                        return {"code": args["code"]}, "submitted"
                     fields = args.get("fields", {})
                     return {k: str(v) for k, v in fields.items()}, "submitted"
                 out = self._dispatch_tool(name, args, ctx, tracer, usage)

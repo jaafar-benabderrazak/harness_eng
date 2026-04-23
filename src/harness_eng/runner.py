@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Iterable
 
 from .config import RESULTS_DIR
-from .grader import grade
+from .grader import grade, grade_code
 from .harnesses import HARNESSES, Harness, HarnessResult
 from .tasks.loader import Task, load_tasks
 
@@ -61,13 +61,21 @@ def check_freeze_gate() -> None:
         )
 
 
-def _result_row(hr: HarnessResult, expected: dict[str, str]) -> dict:
-    g = grade(hr.predicted, expected)
+def _result_row(hr: HarnessResult, task: Task) -> dict:
+    """Grade the harness output against the task. Branches on task.type."""
+    if task.type == "code_gen":
+        submitted_code = (hr.predicted or {}).get("code", "")
+        g = grade_code(submitted_code, task.test_code)
+        expected_repr = {"type": "code_gen", "signature": task.signature}
+    else:
+        g = grade(hr.predicted, task.expected)
+        expected_repr = task.expected
     row = asdict(hr)
+    row["task_type"] = task.type
     row["success"] = g.success
     row["field_accuracy"] = g.field_accuracy
     row["per_field"] = g.per_field
-    row["expected"] = expected
+    row["expected"] = expected_repr
     return row
 
 
@@ -143,7 +151,7 @@ def run_matrix(
             task = task_by_id[task_id]
             cell_run_id = f"{run_id}-{seed}"
             hr = harness.run(task, run_id=cell_run_id)
-            row = _result_row(hr, task.expected)
+            row = _result_row(hr, task)
             row["seed"] = seed
             fh.write(json.dumps(row, default=str) + "\n")
             fh.flush()

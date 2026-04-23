@@ -10,6 +10,7 @@ import time
 import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from ..model import ModelCall, call as model_call
@@ -72,7 +73,13 @@ class Harness(ABC):
 
     def run(self, task: Task, run_id: str | None = None) -> HarnessResult:
         run_id = run_id or uuid.uuid4().hex[:8]
-        ctx = ToolContext(html_path=task.html_path)  # type: ignore[arg-type]
+        # Build a task-type-appropriate ToolContext. HTML tasks need html_path;
+        # code tasks need test_code + signature so run_tests can grade in-loop.
+        ctx = ToolContext(
+            html_path=Path(task.html_path) if task.html_path else Path(""),
+            test_code=task.test_code,
+            signature=task.signature,
+        )
         usage = _Usage()
         t0 = time.perf_counter()
         predicted: dict[str, str] | None = None

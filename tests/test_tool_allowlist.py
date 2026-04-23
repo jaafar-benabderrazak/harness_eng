@@ -15,6 +15,10 @@ EXPECTED = {
     "plan_execute": {"css_select", "extract_text", "submit_answer"},
     "reflexion": {"read_html", "css_select", "extract_text", "submit_answer"},
     "minimal": {"css_select", "submit_answer"},
+    # Code-gen family
+    "chain_of_thought": {"submit_answer"},
+    "test_driven": {"check_syntax", "run_tests", "submit_answer"},
+    "retry_on_fail": {"submit_answer"},
 }
 
 

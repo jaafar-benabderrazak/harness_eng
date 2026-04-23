@@ -73,6 +73,8 @@ class ReflexionHarness(Harness):
                 name = tu["name"]
                 args = tu.get("input", {}) or {}
                 if name == "submit_answer":
+                    if "code" in args:
+                        return {"code": args["code"]}, "submitted", trace_text
                     fields = args.get("fields", {})
                     return {k: str(v) for k, v in fields.items()}, "submitted", trace_text
                 out = self._dispatch_tool(name, args, ctx, tracer, usage)

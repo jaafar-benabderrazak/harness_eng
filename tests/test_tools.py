@@ -34,6 +34,9 @@ def test_build_tool_list_subset():
     assert names == ["css_select", "submit_answer"]
 
 
-def test_submit_answer_schema_requires_fields():
+def test_submit_answer_schema_accepts_both_payloads():
+    """submit_answer's schema overloads: fields for HTML tasks, code for code-gen."""
     schema = TOOL_SCHEMAS["submit_answer"]
-    assert "fields" in schema["input_schema"]["required"]
+    props = schema["input_schema"]["properties"]
+    assert "fields" in props
+    assert "code" in props

@@ -1,9 +1,12 @@
 from harness_eng.harnesses import HARNESSES
 
 
-def test_all_five_harnesses_registered():
+def test_all_harnesses_registered():
     assert set(HARNESSES.keys()) == {
-        "single_shot", "react", "plan_execute", "reflexion", "minimal"
+        # HTML-extraction family
+        "single_shot", "react", "plan_execute", "reflexion", "minimal",
+        # Code-gen family
+        "chain_of_thought", "test_driven", "retry_on_fail",
     }
 
 

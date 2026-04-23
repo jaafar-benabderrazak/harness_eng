@@ -32,7 +32,10 @@ class SingleShotHarness(Harness):
         mc = self._step_model(BASE_ROLE, [{"role": "user", "content": user}], tools, tracer, usage)
         for block in self._tool_uses(mc.content):
             if block["name"] == "submit_answer":
-                fields = block.get("input", {}).get("fields", {})
+                inp = block.get("input", {}) or {}
+                if "code" in inp:
+                    return {"code": inp["code"]}, "submitted"
+                fields = inp.get("fields", {})
                 return {k: str(v) for k, v in fields.items()}, "submitted"
         # Model didn't call submit_answer. Try to parse JSON from text as a fallback.
         text = self._text_of(mc.content)
