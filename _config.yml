@@ -33,8 +33,8 @@ exclude:
   - .gitignore
   - .github
 
-# Absolute links in markdown resolve against this when deployed to user.github.io/harness_eng
-baseurl: /harness_eng
+# Absolute links in markdown resolve against this when deployed to user.github.io/harness-bench
+baseurl: /harness-bench
 
 # Kramdown defaults match GFM closely — needed for tables and fenced code blocks to render.
 markdown: kramdown

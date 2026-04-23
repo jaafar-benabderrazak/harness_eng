@@ -49,7 +49,7 @@ CI green on ubuntu-latest + windows-latest (run 24829222393).
 
 ## Repo state
 
-- GitHub: <https://github.com/jaafar-benabderrazak/harness_eng>
+- GitHub: <https://github.com/jaafar-benabderrazak/harness-bench>
 - main: `d0fc1f1`
 - tag `harnesses-frozen`: `d0fc1f1`
 - Offline demo available: `python scripts/demo_matrix.py` — exercises pipeline with deterministic fake model

@@ -9,7 +9,7 @@ title: harness_eng
 
 ## Read the writeup
 
-**[article-glm-20260423 — seeds=3 production run](writeup/article-glm-20260423.html)** *(opens the article rendered with Jekyll; the Markdown source is [`writeup/article-glm-20260423.md`](https://github.com/jaafar-benabderrazak/harness_eng/blob/main/writeup/article-glm-20260423.md) in the repo)*
+**[article-glm-20260423 — seeds=3 production run](writeup/article-glm-20260423.html)** *(opens the article rendered with Jekyll; the Markdown source is [`writeup/article-glm-20260423.md`](https://github.com/jaafar-benabderrazak/harness-bench/blob/main/writeup/article-glm-20260423.md) in the repo)*
 
 ## Headline finding
 
@@ -32,16 +32,16 @@ Full methodology + trace evidence + six concrete implications in [the writeup](w
 
 ## Repository layout
 
-- [`README.md`](https://github.com/jaafar-benabderrazak/harness_eng/blob/main/README.md) — quickstart, pre-registered hypothesis, reproduce steps
+- [`README.md`](https://github.com/jaafar-benabderrazak/harness-bench/blob/main/README.md) — quickstart, pre-registered hypothesis, reproduce steps
 - [`HELD_OUT.md`](HELD_OUT.html) — held-out fixture decision + rationale
 - [`HARNESSES_FROZEN.md`](HARNESSES_FROZEN.html) — freeze manifest + tag-move log
-- [`writeup/`](https://github.com/jaafar-benabderrazak/harness_eng/tree/main/writeup) — dated article + charts
-- [GitHub repo](https://github.com/jaafar-benabderrazak/harness_eng) — source, tests, harness implementations, offline demo
+- [`writeup/`](https://github.com/jaafar-benabderrazak/harness-bench/tree/main/writeup) — dated article + charts
+- [GitHub repo](https://github.com/jaafar-benabderrazak/harness-bench) — source, tests, harness implementations, offline demo
 
 ## Reproduce
 
 ```bash
-git clone https://github.com/jaafar-benabderrazak/harness_eng && cd harness_eng
+git clone https://github.com/jaafar-benabderrazak/harness-bench && cd harness-bench
 pip install -e ".[dev]"
 cp .env.example .env     # HARNESS_BACKEND=ollama, HARNESS_MODEL=glm-4.7-flash:latest
 ollama pull glm-4.7-flash:latest

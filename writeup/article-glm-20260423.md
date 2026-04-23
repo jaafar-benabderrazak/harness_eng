@@ -150,7 +150,7 @@ Seven concrete takeaways, each actionable by EOD tomorrow:
 ## Reproduce
 
 ```bash
-git clone https://github.com/jaafar-benabderrazak/harness_eng && cd harness_eng
+git clone https://github.com/jaafar-benabderrazak/harness-bench && cd harness-bench
 pip install -e ".[dev]"
 cp .env.example .env     # HARNESS_BACKEND=ollama, HARNESS_MODEL=glm-4.7-flash:latest
 ollama pull glm-4.7-flash:latest
