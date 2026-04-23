@@ -8,9 +8,15 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # freeze-gate tests need tag + history
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -22,4 +28,6 @@ jobs:
       - name: Ruff
         run: ruff check src tests scripts
       - name: Pytest (no API calls)
+        env:
+          HARNESS_ENG_SKIP_FREEZE_GATE: "1"
         run: pytest -q

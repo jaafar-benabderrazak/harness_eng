@@ -1,0 +1,12 @@
+# Fixtures and traces are reproducibility-critical artifacts.
+# CRLF conversion would change byte-level hashes and break cross-OS test determinism.
+*.html -text
+*.jsonl -text
+
+# Source stays LF even on Windows so diffs, freeze-gate checks, and blob SHAs
+# are stable across developer machines.
+*.py text eol=lf
+*.md text eol=lf
+*.toml text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf

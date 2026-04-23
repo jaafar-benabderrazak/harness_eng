@@ -31,17 +31,26 @@ On the frozen model (`claude-sonnet-4-6`, temperature 0, max_tokens 2048) and th
 ## Quickstart
 
 ```bash
-python -m venv .venv && . .venv/bin/activate  # or .venv\Scripts\activate on Windows
+# 1. Install (runs on Linux + Windows — CI verifies both)
+python -m venv .venv && . .venv/bin/activate  # .venv\Scripts\activate on Windows
 pip install -e ".[dev]"
-cp .env.example .env                           # set ANTHROPIC_API_KEY
 
-# Sanity pilot (5 tasks x 5 harnesses). Estimate spend before running full.
+# 2. Run the test suite. No API key needed — all tests are offline.
+pytest -q
+
+# 3. Configure API key for real runs.
+cp .env.example .env   # set ANTHROPIC_API_KEY
+
+# 4. Cost estimate BEFORE spending. Dry run only — no API calls.
+python scripts/estimate_cost.py --seeds 3
+
+# 5. Sanity pilot (1 task × 5 harnesses × 1 seed). Validates the plumbing.
 python scripts/run_pilot.py
 
-# Full run (40 tasks x 5 harnesses x N seeds)
-python scripts/run_full.py --seeds 1
+# 6. Full matrix (5 tasks × 5 harnesses × 3 seeds). Gated by cost confirmation + freeze tag.
+python scripts/run_full.py --seeds 3
 
-# Aggregate + chart
+# 7. Aggregate + chart + article + trace viewer (no API calls).
 python scripts/make_chart.py
 ```
 
