@@ -5,10 +5,13 @@ Use this before committing API spend on the full matrix.
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 
-from harness_eng.harnesses import HARNESSES
-from harness_eng.runner import run_matrix
-from harness_eng.tasks.loader import load_tasks
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+
+from harness_eng.harnesses import HARNESSES  # noqa: E402
+from harness_eng.runner import run_matrix  # noqa: E402
+from harness_eng.tasks.loader import load_tasks  # noqa: E402
 
 
 def main() -> int:

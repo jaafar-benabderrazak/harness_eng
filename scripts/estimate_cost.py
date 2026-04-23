@@ -3,9 +3,12 @@ from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
 
-from harness_eng.cost_estimator import estimate_matrix, format_estimate
-from harness_eng.tasks.loader import load_tasks
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+
+from harness_eng.cost_estimator import estimate_matrix, format_estimate  # noqa: E402
+from harness_eng.tasks.loader import load_tasks  # noqa: E402
 
 
 def main() -> int:

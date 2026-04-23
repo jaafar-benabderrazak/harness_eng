@@ -5,9 +5,11 @@ import argparse
 import sys
 from pathlib import Path
 
-from harness_eng.analysis import produce_all
-from harness_eng.config import RESULTS_DIR
-from harness_eng.trace_viewer import build_viewer
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+
+from harness_eng.analysis import produce_all  # noqa: E402
+from harness_eng.config import RESULTS_DIR  # noqa: E402
+from harness_eng.trace_viewer import build_viewer  # noqa: E402
 
 
 def _latest() -> Path:

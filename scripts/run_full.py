@@ -3,13 +3,16 @@ from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
 
-from harness_eng.analysis import produce_all
-from harness_eng.cost_estimator import estimate_matrix, format_estimate
-from harness_eng.harnesses import HARNESSES
-from harness_eng.runner import run_matrix
-from harness_eng.tasks.loader import load_tasks
-from harness_eng.trace_viewer import build_viewer
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+
+from harness_eng.analysis import produce_all  # noqa: E402
+from harness_eng.cost_estimator import estimate_matrix, format_estimate  # noqa: E402
+from harness_eng.harnesses import HARNESSES  # noqa: E402
+from harness_eng.runner import run_matrix  # noqa: E402
+from harness_eng.tasks.loader import load_tasks  # noqa: E402
+from harness_eng.trace_viewer import build_viewer  # noqa: E402
 
 
 def main() -> int:
