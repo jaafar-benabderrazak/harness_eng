@@ -102,26 +102,54 @@ def frontier_chart(agg: Aggregates, out: Path) -> None:
 
 
 def field_heatmap(agg: Aggregates, out: Path) -> None:
+    """Per-task × per-harness mean field accuracy.
+
+    Field names vary across tasks (product has price_usd; job has salary_min_usd),
+    so a per-field × per-harness matrix collapses to whichever field appears in
+    every task (usually just `title`). A per-task heatmap is more informative.
+    """
     rows = agg.df_rows.copy()
-    # Explode per_field dict into one column per field.
-    field_df = pd.json_normalize(rows["per_field"])
-    field_df["harness"] = rows["harness"].values
-    per_harness_field = field_df.groupby("harness").mean(numeric_only=True)
-    fig, ax = plt.subplots(figsize=(max(6, 0.6 * len(per_harness_field.columns)), 3.5))
-    im = ax.imshow(per_harness_field.values, cmap="RdYlGn", vmin=0, vmax=1, aspect="auto")
-    ax.set_xticks(range(len(per_harness_field.columns)))
-    ax.set_xticklabels(per_harness_field.columns, rotation=45, ha="right")
-    ax.set_yticks(range(len(per_harness_field.index)))
-    ax.set_yticklabels(per_harness_field.index)
-    for i in range(per_harness_field.shape[0]):
-        for j in range(per_harness_field.shape[1]):
-            ax.text(j, i, f"{per_harness_field.values[i, j]:.2f}",
-                    ha="center", va="center", fontsize=7, color="black")
-    ax.set_title("Per-field accuracy by harness")
+    pivot = (
+        rows.pivot_table(
+            index="harness",
+            columns="task_id",
+            values="field_accuracy",
+            aggfunc="mean",
+        )
+        .reindex(index=agg.df_harness["harness"].tolist())
+    )
+    fig, ax = plt.subplots(figsize=(max(6, 0.8 * len(pivot.columns)), 3.5))
+    im = ax.imshow(pivot.values, cmap="RdYlGn", vmin=0, vmax=1, aspect="auto")
+    ax.set_xticks(range(len(pivot.columns)))
+    ax.set_xticklabels(pivot.columns, rotation=45, ha="right")
+    ax.set_yticks(range(len(pivot.index)))
+    ax.set_yticklabels(pivot.index)
+    for i in range(pivot.shape[0]):
+        for j in range(pivot.shape[1]):
+            v = pivot.values[i, j]
+            if pd.isna(v):
+                continue
+            ax.text(j, i, f"{v:.2f}",
+                    ha="center", va="center", fontsize=8,
+                    color="white" if v < 0.4 else "black")
+    ax.set_title("Mean field accuracy per task per harness")
     fig.colorbar(im, ax=ax, fraction=0.02, pad=0.02)
     fig.tight_layout()
     fig.savefig(out, dpi=140)
     plt.close(fig)
+
+
+def _df_to_markdown(df: pd.DataFrame) -> str:
+    """Hand-rolled markdown table — avoids optional tabulate dependency."""
+    cols = list(df.columns)
+    def fmt(x):
+        if isinstance(x, float):
+            return f"{x:.3f}"
+        return str(x)
+    header = "| " + " | ".join(cols) + " |"
+    sep = "|" + "|".join(["---"] * len(cols)) + "|"
+    rows = ["| " + " | ".join(fmt(v) for v in r) + " |" for r in df.itertuples(index=False, name=None)]
+    return "\n".join([header, sep, *rows])
 
 
 def write_article(agg: Aggregates, chart_rel: str, heatmap_rel: str, out: Path) -> None:
@@ -136,7 +164,7 @@ def write_article(agg: Aggregates, chart_rel: str, heatmap_rel: str, out: Path) 
         df["cost_usd"].max() / df["cost_usd"].min()
         if df["cost_usd"].min() > 0 else float("inf")
     )
-    table_md = df.to_markdown(index=False, floatfmt=".3f")
+    table_md = _df_to_markdown(df)
     body = f"""# Same model, five harnesses, one benchmark
 
 ## Hook
