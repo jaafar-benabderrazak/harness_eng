@@ -7,6 +7,8 @@ dataclass row. Rows are appended to results/runs/{timestamp}.jsonl.
 from __future__ import annotations
 
 import json
+import os
+import subprocess
 import time
 import uuid
 from dataclasses import asdict
@@ -17,6 +19,46 @@ from .config import RESULTS_DIR
 from .grader import grade
 from .harnesses import HARNESSES, Harness, HarnessResult
 from .tasks.loader import Task, load_tasks
+
+FREEZE_TAG = "harnesses-frozen"
+GATED_PATHS = (
+    "src/harness_eng/harnesses/",
+    "src/harness_eng/tools.py",
+    "src/harness_eng/model.py",
+)
+
+
+class FreezeGateError(RuntimeError):
+    """Raised when the runner detects that gated files have diverged from the freeze tag."""
+
+
+def check_freeze_gate() -> None:
+    """Refuse to run if any gated file differs from the `harnesses-frozen` tag.
+
+    Bypass with HARNESS_ENG_SKIP_FREEZE_GATE=1 — tests only.
+    """
+    if os.environ.get("HARNESS_ENG_SKIP_FREEZE_GATE") == "1":
+        return
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--name-only", FREEZE_TAG, "HEAD", "--", *GATED_PATHS],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError as e:
+        raise FreezeGateError(f"git not available: {e}") from e
+    if result.returncode != 0:
+        raise FreezeGateError(
+            f"{FREEZE_TAG} tag not found — create with: git tag {FREEZE_TAG} <sha>. "
+            f"stderr: {result.stderr.strip()}"
+        )
+    diverged = [line for line in result.stdout.strip().splitlines() if line]
+    if diverged:
+        raise FreezeGateError(
+            f"Gated files diverged from {FREEZE_TAG}: {', '.join(diverged)}. "
+            "Either revert these files or move the tag (which invalidates the experiment)."
+        )
 
 
 def _result_row(hr: HarnessResult, expected: dict[str, str]) -> dict:
@@ -35,6 +77,7 @@ def run_matrix(
     seeds: int = 1,
     run_dir: Path | None = None,
 ) -> Path:
+    check_freeze_gate()
     tasks = tasks or load_tasks()
     run_id = time.strftime("%Y%m%d_%H%M%S") + "_" + uuid.uuid4().hex[:4]
     run_dir = run_dir or RESULTS_DIR / "runs"
