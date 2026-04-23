@@ -19,6 +19,21 @@ from .config import CONFIG, RESULTS_DIR, TRACES_DIR  # noqa: E402
 from .pricing import cost_usd  # noqa: E402
 
 
+# Project-wide palette so the same harness gets the same color in every chart.
+HARNESS_COLORS: dict[str, str] = {
+    # HTML-extraction family
+    "single_shot":      "#2563eb",  # blue
+    "react":            "#dc2626",  # red
+    "plan_execute":     "#9333ea",  # purple
+    "reflexion":        "#ea580c",  # orange
+    "minimal":          "#059669",  # green
+    # Code-gen family
+    "chain_of_thought": "#db2777",  # pink
+    "test_driven":      "#0891b2",  # teal
+    "retry_on_fail":    "#ca8a04",  # amber
+}
+
+
 def wilson_ci(successes: int, trials: int, z: float = 1.96) -> tuple[float, float]:
     """Wilson score interval for a binomial proportion.
 
@@ -97,38 +112,101 @@ def frontier_chart(agg: Aggregates, out: Path) -> None:
     non-zero cost (paid API), wall-clock seconds when all costs are zero (local
     inference — time is the scarce resource). Falls back to total tokens if both
     collapse to zero.
+
+    When all harnesses have the same success rate (e.g., all 100%), the scatter
+    collapses to a horizontal line, so we also output a horizontal bar chart of
+    the x-axis resource next to each harness — that's the picture of who won.
     """
     df = agg.df_harness.copy()
     if df["cost_usd"].sum() > 0:
         x_col, x_label = "cost_usd", "Cost per run matrix (USD)"
     elif df["wall_clock_s"].sum() > 0:
-        x_col, x_label = "wall_clock_s", "Wall-clock per run matrix (seconds)"
+        x_col, x_label = "wall_clock_s", "Wall-clock per run matrix (s)"
     else:
         df["_total_tokens"] = df["input_tokens"] + df["output_tokens"]
         x_col, x_label = "_total_tokens", "Total tokens per run matrix"
 
-    fig, ax = plt.subplots(figsize=(7, 5))
+    all_equal_success = df["success_rate"].nunique() == 1
+
+    fig, ax = plt.subplots(figsize=(10, 6.2))
     yerr_low = (df["success_rate"] - df["ci_low"]).clip(lower=0)
     yerr_high = (df["ci_high"] - df["success_rate"]).clip(lower=0)
-    ax.errorbar(
-        df[x_col], df["success_rate"],
-        yerr=[yerr_low, yerr_high],
-        fmt="o", capsize=4, markersize=8, elinewidth=1,
-    )
-    # Stagger labels vertically by index to avoid overlaps when x values tie.
-    offsets = [(6, 6), (6, -10), (6, 18), (6, -22), (6, 30)]
+
+    # One colored point + error bar per harness, via the project-wide color map.
+    for _, row in df.iterrows():
+        color = HARNESS_COLORS.get(row["harness"], "#374151")
+        idx = df.index[df["harness"] == row["harness"]][0]
+        ax.errorbar(
+            row[x_col], row["success_rate"],
+            yerr=[[yerr_low.loc[idx]], [yerr_high.loc[idx]]],
+            fmt="o", capsize=5, markersize=11, elinewidth=1.4,
+            color=color, zorder=3,
+        )
+
+    # Place labels with leader-line arrows so overlaps don't happen even when
+    # points cluster. Offsets walk around each point in a small ring.
+    ring = [(14, 14), (14, -16), (-14, 14), (-14, -16), (0, 22), (0, -26)]
     for i, (_, row) in enumerate(df.iterrows()):
+        color = HARNESS_COLORS.get(row["harness"], "#374151")
+        ox, oy = ring[i % len(ring)]
         ax.annotate(
             row["harness"], (row[x_col], row["success_rate"]),
-            xytext=offsets[i % len(offsets)], textcoords="offset points",
+            xytext=(ox, oy), textcoords="offset points",
+            color=color, fontweight="bold", fontsize=11,
+            arrowprops=dict(arrowstyle="-", color=color, lw=0.7, alpha=0.6),
         )
-    ax.set_xlabel(x_label)
-    ax.set_ylabel("Task success rate (Wilson 95% CI)")
-    ax.set_title(f"Success vs cost across harnesses — model frozen at {CONFIG.model.name}")
-    ax.grid(alpha=0.3)
-    ax.set_ylim(-0.05, 1.05)
+
+    ax.set_xlabel(x_label, fontsize=11)
+    ax.set_ylabel("Task success rate (Wilson 95% CI)", fontsize=11)
+    note = ""
+    if all_equal_success:
+        note = " — all harnesses at same success; comparison is on x-axis only"
+    ax.set_title(
+        f"Success vs cost across harnesses — model frozen at {CONFIG.model.name}{note}",
+        fontsize=12,
+    )
+    ax.grid(alpha=0.25, linewidth=0.8)
+    ax.set_ylim(-0.05, 1.08)
+    # Pad x-axis so annotations fit
+    x_min, x_max = df[x_col].min(), df[x_col].max()
+    x_span = max(x_max - x_min, 1.0)
+    ax.set_xlim(x_min - x_span * 0.15, x_max + x_span * 0.20)
     fig.tight_layout()
-    fig.savefig(out, dpi=140)
+    fig.savefig(out, dpi=170, bbox_inches="tight")
+    plt.close(fig)
+
+
+def resource_bar(agg: Aggregates, out: Path) -> None:
+    """Horizontal bars: for each harness, total wall-clock + input tokens. Clean
+    readable comparison when everyone's at the same success rate (the 'who's
+    wasteful?' picture)."""
+    df = agg.df_harness.sort_values("wall_clock_s").copy()
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4.5))
+
+    # Left: wall-clock
+    colors = [HARNESS_COLORS.get(h, "#374151") for h in df["harness"]]
+    bars1 = ax1.barh(df["harness"], df["wall_clock_s"], color=colors, edgecolor="white")
+    for bar, v, success in zip(bars1, df["wall_clock_s"], df["success_rate"]):
+        ax1.text(v + df["wall_clock_s"].max() * 0.015, bar.get_y() + bar.get_height() / 2,
+                 f"{v:.0f}s  ({success*100:.0f}% ok)", va="center", fontsize=9)
+    ax1.set_xlabel("Wall-clock per run matrix (seconds)")
+    ax1.set_title("Time spent per harness")
+    ax1.grid(axis="x", alpha=0.25)
+    ax1.set_xlim(0, df["wall_clock_s"].max() * 1.35)
+
+    # Right: input tokens
+    bars2 = ax2.barh(df["harness"], df["input_tokens"], color=colors, edgecolor="white")
+    for bar, v in zip(bars2, df["input_tokens"]):
+        ax2.text(v + df["input_tokens"].max() * 0.015, bar.get_y() + bar.get_height() / 2,
+                 f"{v:,}", va="center", fontsize=9)
+    ax2.set_xlabel("Total input tokens across matrix")
+    ax2.set_title("Tokens consumed per harness")
+    ax2.grid(axis="x", alpha=0.25)
+    ax2.set_xlim(0, df["input_tokens"].max() * 1.25)
+
+    fig.suptitle(f"Resource usage per harness — {CONFIG.model.name}", fontsize=12, y=1.02)
+    fig.tight_layout()
+    fig.savefig(out, dpi=170, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -170,23 +248,17 @@ def field_heatmap(agg: Aggregates, out: Path) -> None:
     plt.close(fig)
 
 
-HARNESS_COLORS: dict[str, str] = {
-    "single_shot":  "#2563eb",  # blue
-    "react":        "#dc2626",  # red
-    "plan_execute": "#9333ea",  # purple
-    "reflexion":    "#ea580c",  # orange
-    "minimal":      "#059669",  # green
-}
-
-
 def stop_reason_chart(agg: Aggregates, out: Path) -> None:
-    """Stacked-bar chart: stop_reason composition per harness."""
+    """Stacked-bar chart: stop_reason composition per harness.
+
+    Legend goes OUTSIDE the plot area so it never occludes the bars — the
+    previous in-plot legend hid plan_execute's rightmost segments.
+    """
     rows = agg.df_rows
     pivot = (
         rows.groupby(["harness", "stop_reason"]).size().unstack(fill_value=0)
     )
     pivot = pivot.reindex(index=agg.df_harness["harness"].tolist())
-    # Column order: submitted first (good), everything else after (bad)
     cols = ["submitted"] + [c for c in pivot.columns if c != "submitted"]
     pivot = pivot[[c for c in cols if c in pivot.columns]]
     stop_colors = {
@@ -195,22 +267,23 @@ def stop_reason_chart(agg: Aggregates, out: Path) -> None:
         "no_submit":  "#9333ea",
         "error":      "#dc2626",
     }
-    fig, ax = plt.subplots(figsize=(7, 3.5))
+    fig, ax = plt.subplots(figsize=(10, max(3.5, 0.55 * len(pivot) + 1.5)))
     left = [0] * len(pivot)
     for col in pivot.columns:
         vals = pivot[col].values
-        ax.barh(pivot.index, vals, left=left, label=col, color=stop_colors.get(col, "#6b7280"))
+        ax.barh(pivot.index, vals, left=left, label=col,
+                color=stop_colors.get(col, "#6b7280"), edgecolor="white")
         for i, v in enumerate(vals):
             if v > 0:
                 ax.text(left[i] + v / 2, i, str(v), ha="center", va="center",
-                        fontsize=9, color="white", fontweight="bold")
+                        fontsize=10, color="white", fontweight="bold")
         left = [x + v for x, v in zip(left, vals)]
-    ax.set_xlabel("Cells (out of N)")
-    ax.set_title("Stop-reason distribution per harness")
-    ax.legend(loc="lower right", framealpha=0.95)
-    ax.grid(axis="x", alpha=0.3)
+    ax.set_xlabel("Cells (out of N)", fontsize=11)
+    ax.set_title(f"Stop-reason distribution per harness — {CONFIG.model.name}", fontsize=12)
+    ax.legend(loc="center left", bbox_to_anchor=(1.02, 0.5), framealpha=1.0, title="stop reason")
+    ax.grid(axis="x", alpha=0.25)
     fig.tight_layout()
-    fig.savefig(out, dpi=140)
+    fig.savefig(out, dpi=170, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -226,30 +299,32 @@ def wall_clock_heatmap(agg: Aggregates, out: Path) -> None:
         )
         .reindex(index=agg.df_harness["harness"].tolist())
     )
-    fig, ax = plt.subplots(figsize=(max(6, 0.9 * len(pivot.columns)), 3.5))
+    fig, ax = plt.subplots(figsize=(max(7, 1.05 * len(pivot.columns) + 2), 0.7 * len(pivot) + 2))
     im = ax.imshow(pivot.values, cmap="YlOrRd", aspect="auto")
     ax.set_xticks(range(len(pivot.columns)))
-    ax.set_xticklabels(pivot.columns, rotation=45, ha="right")
+    ax.set_xticklabels(pivot.columns, rotation=35, ha="right", fontsize=10)
     ax.set_yticks(range(len(pivot.index)))
-    ax.set_yticklabels(pivot.index)
+    ax.set_yticklabels(pivot.index, fontsize=10)
+    vmax = pivot.values.max()
     for i in range(pivot.shape[0]):
         for j in range(pivot.shape[1]):
             v = pivot.values[i, j]
             if pd.isna(v):
                 continue
-            color = "white" if v > pivot.values.max() * 0.55 else "black"
-            ax.text(j, i, f"{v:.0f}s", ha="center", va="center", fontsize=8, color=color)
-    ax.set_title("Mean wall-clock per cell (seconds) — where each harness spent time")
-    fig.colorbar(im, ax=ax, fraction=0.02, pad=0.02, label="seconds")
+            color = "white" if v > vmax * 0.55 else "black"
+            ax.text(j, i, f"{v:.0f}s", ha="center", va="center", fontsize=10, color=color,
+                    fontweight="bold")
+    ax.set_title("Mean wall-clock per cell (seconds)", fontsize=12)
+    fig.colorbar(im, ax=ax, fraction=0.025, pad=0.02, label="seconds")
     fig.tight_layout()
-    fig.savefig(out, dpi=140)
+    fig.savefig(out, dpi=170, bbox_inches="tight")
     plt.close(fig)
 
 
 def token_efficiency_chart(agg: Aggregates, out: Path) -> None:
     """Scatter: total input_tokens vs success_rate, with Wilson CI as vertical error bars."""
     df = agg.df_harness.copy()
-    fig, ax = plt.subplots(figsize=(7, 5))
+    fig, ax = plt.subplots(figsize=(10, 6.2))
     yerr_low = (df["success_rate"] - df["ci_low"]).clip(lower=0)
     yerr_high = (df["ci_high"] - df["success_rate"]).clip(lower=0)
     for i, (_, row) in enumerate(df.iterrows()):
@@ -257,22 +332,28 @@ def token_efficiency_chart(agg: Aggregates, out: Path) -> None:
         ax.errorbar(
             row["input_tokens"], row["success_rate"],
             yerr=[[yerr_low.iloc[i]], [yerr_high.iloc[i]]],
-            fmt="o", capsize=4, markersize=10, elinewidth=1, color=color,
+            fmt="o", capsize=5, markersize=12, elinewidth=1.4, color=color, zorder=3,
         )
+    # Label ring with leader lines — same approach as frontier_chart
+    ring = [(14, 14), (14, -16), (-14, 14), (-14, -16), (0, 22), (0, -26), (22, 0), (-22, 0)]
+    for i, (_, row) in enumerate(df.iterrows()):
+        color = HARNESS_COLORS.get(row["harness"], "#374151")
+        ox, oy = ring[i % len(ring)]
         ax.annotate(
             row["harness"],
             (row["input_tokens"], row["success_rate"]),
-            xytext=(10, 0), textcoords="offset points",
-            color=color, fontweight="bold",
+            xytext=(ox, oy), textcoords="offset points",
+            color=color, fontweight="bold", fontsize=11,
+            arrowprops=dict(arrowstyle="-", color=color, lw=0.7, alpha=0.6),
         )
     ax.set_xscale("log")
-    ax.set_xlabel("Total input tokens across matrix (log scale)")
-    ax.set_ylabel("Task success rate (Wilson 95% CI)")
-    ax.set_title(f"Token efficiency — {CONFIG.model.name}")
-    ax.grid(alpha=0.3, which="both")
-    ax.set_ylim(-0.05, 1.05)
+    ax.set_xlabel("Total input tokens across matrix (log scale)", fontsize=11)
+    ax.set_ylabel("Task success rate (Wilson 95% CI)", fontsize=11)
+    ax.set_title(f"Token efficiency — {CONFIG.model.name}", fontsize=12)
+    ax.grid(alpha=0.25, which="both", linewidth=0.7)
+    ax.set_ylim(-0.05, 1.08)
     fig.tight_layout()
-    fig.savefig(out, dpi=140)
+    fig.savefig(out, dpi=170, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -621,6 +702,9 @@ def produce_all(run_path: Path, out_dir: Path | None = None) -> dict[str, Path]:
     tokeff_path = out_dir / "token_efficiency.png"
     token_efficiency_chart(agg, tokeff_path)
 
+    resource_path = out_dir / "resource_bars.png"
+    resource_bar(agg, resource_path)
+
     article_path = out_dir / "article.md"
     write_article(
         agg,
@@ -636,5 +720,6 @@ def produce_all(run_path: Path, out_dir: Path | None = None) -> dict[str, Path]:
         "stop_reasons": stop_path,
         "wall_clock_heatmap": wallclock_path,
         "token_efficiency": tokeff_path,
+        "resource_bars": resource_path,
         "article": article_path,
     }
