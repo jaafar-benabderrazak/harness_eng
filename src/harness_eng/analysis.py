@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import json
 import math
+import subprocess
+from collections import Counter, defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -13,7 +15,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import pandas as pd  # noqa: E402
 
-from .config import CONFIG, RESULTS_DIR  # noqa: E402
+from .config import CONFIG, RESULTS_DIR, TRACES_DIR  # noqa: E402
 from .pricing import cost_usd  # noqa: E402
 
 
@@ -139,6 +141,120 @@ def field_heatmap(agg: Aggregates, out: Path) -> None:
     plt.close(fig)
 
 
+def freeze_sha() -> str:
+    """Resolve the `harnesses-frozen` tag to its commit SHA. 'unknown' if not in a git repo."""
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "harnesses-frozen^{commit}"],
+            capture_output=True, text=True, check=False,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()[:10]
+    except (FileNotFoundError, OSError):
+        pass
+    return "unknown"
+
+
+@dataclass
+class TraceSummary:
+    """Per-harness trace aggregates: failure modes + notable traces by criterion."""
+    stop_reasons: dict[str, Counter]          # harness -> Counter(stop_reason)
+    failing_cells: dict[str, list[tuple[str, str]]]  # harness -> [(task_id, reason)]
+    most_expensive: dict[str, tuple[str, Path, int]]  # harness -> (task_id, path, total_tokens)
+    longest_turn_count: dict[str, tuple[str, Path, int]]  # harness -> (task_id, path, turns)
+
+
+def summarize_traces(traces_dir: Path | None = None) -> TraceSummary:
+    """Walk traces/ and extract failure-mode counts + notable-trace pointers per harness."""
+    traces_dir = traces_dir or TRACES_DIR
+    stop_reasons: dict[str, Counter] = defaultdict(Counter)
+    failing: dict[str, list[tuple[str, str]]] = defaultdict(list)
+    cost_per_cell: dict[str, list[tuple[int, str, Path]]] = defaultdict(list)
+    turns_per_cell: dict[str, list[tuple[int, str, Path]]] = defaultdict(list)
+    if not traces_dir.exists():
+        return TraceSummary({}, {}, {}, {})
+    for harness_dir in sorted(p for p in traces_dir.iterdir() if p.is_dir()):
+        for task_dir in sorted(p for p in harness_dir.iterdir() if p.is_dir()):
+            for trace_file in sorted(task_dir.glob("*.jsonl")):
+                end_event: dict | None = None
+                turns = 0
+                for line in trace_file.read_text(encoding="utf-8").splitlines():
+                    if not line.strip():
+                        continue
+                    try:
+                        ev = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    if ev.get("type") == "run_end":
+                        end_event = ev
+                    elif ev.get("type") == "model_response":
+                        turns += 1
+                if end_event is None:
+                    stop_reasons[harness_dir.name]["incomplete"] += 1
+                    failing[harness_dir.name].append((task_dir.name, "no run_end event"))
+                    continue
+                reason = end_event.get("stop_reason", "unknown")
+                stop_reasons[harness_dir.name][reason] += 1
+                if reason != "submitted":
+                    failing[harness_dir.name].append((task_dir.name, reason))
+                total_tokens = end_event.get("input_tokens", 0) + end_event.get("output_tokens", 0)
+                cost_per_cell[harness_dir.name].append((total_tokens, task_dir.name, trace_file))
+                turns_per_cell[harness_dir.name].append((turns, task_dir.name, trace_file))
+    most_expensive = {
+        h: (t, p, tok) for h, entries in cost_per_cell.items()
+        for tok, t, p in [max(entries)] if entries
+    }
+    longest = {
+        h: (t, p, tr) for h, entries in turns_per_cell.items()
+        for tr, t, p in [max(entries)] if entries
+    }
+    return TraceSummary(
+        stop_reasons=dict(stop_reasons),
+        failing_cells=dict(failing),
+        most_expensive=most_expensive,
+        longest_turn_count=longest,
+    )
+
+
+def _failure_section(ts: TraceSummary) -> str:
+    """Render a pre-populated failure-mode section from trace scan."""
+    if not ts.stop_reasons:
+        return "*No traces found — run `scripts/run_full.py` to populate `traces/`.*"
+    lines = ["### Stop-reason distribution per harness", ""]
+    lines.append("| harness | " + " | ".join(sorted({r for c in ts.stop_reasons.values() for r in c})) + " |")
+    reasons = sorted({r for c in ts.stop_reasons.values() for r in c})
+    lines.append("|" + "|".join(["---"] * (len(reasons) + 1)) + "|")
+    for harness in sorted(ts.stop_reasons):
+        c = ts.stop_reasons[harness]
+        row = [harness] + [str(c.get(r, 0)) for r in reasons]
+        lines.append("| " + " | ".join(row) + " |")
+
+    lines.append("")
+    lines.append("### Notable traces to read first")
+    lines.append("")
+    for harness in sorted(ts.stop_reasons):
+        me = ts.most_expensive.get(harness)
+        lt = ts.longest_turn_count.get(harness)
+        if me:
+            t, p, tok = me
+            lines.append(f"- **{harness}** most expensive cell: `{t}` — {tok:,} tokens — `{p}`")
+        if lt and (not me or lt[1] != me[1]):
+            t, p, tr = lt
+            lines.append(f"- **{harness}** longest trace: `{t}` — {tr} model turns — `{p}`")
+
+    failing = {h: v for h, v in ts.failing_cells.items() if v}
+    if failing:
+        lines.append("")
+        lines.append("### Failing cells (by stop_reason)")
+        lines.append("")
+        for harness in sorted(failing):
+            modes = Counter(r for _, r in failing[harness])
+            summary = ", ".join(f"{reason}×{n}" for reason, n in modes.most_common())
+            examples = ", ".join(f"{t} ({r})" for t, r in failing[harness][:3])
+            lines.append(f"- **{harness}**: {summary}. Examples: {examples}.")
+    return "\n".join(lines)
+
+
 def _df_to_markdown(df: pd.DataFrame) -> str:
     """Hand-rolled markdown table — avoids optional tabulate dependency."""
     cols = list(df.columns)
@@ -152,10 +268,18 @@ def _df_to_markdown(df: pd.DataFrame) -> str:
     return "\n".join([header, sep, *rows])
 
 
-def write_article(agg: Aggregates, chart_rel: str, heatmap_rel: str, out: Path) -> None:
+def write_article(
+    agg: Aggregates,
+    chart_rel: str,
+    heatmap_rel: str,
+    out: Path,
+    trace_summary: TraceSummary | None = None,
+) -> None:
     df = agg.df_harness
     best = df.iloc[0]
     worst = df.iloc[-1]
+    trace_summary = trace_summary or summarize_traces()
+    freeze = freeze_sha()
     success_spread = (
         best["success_rate"] / worst["success_rate"]
         if worst["success_rate"] > 0 else float("inf")
@@ -209,14 +333,20 @@ the task set.
 
 ![per-field accuracy]({heatmap_rel})
 
+## Failure modes and notable traces
+
+*Auto-populated from `traces/` — scan these before writing narrative.*
+
+{_failure_section(trace_summary)}
+
 ## What surprised me
 
-*Write this section by hand after reviewing the traces.* The auto-drafter has
-the numbers; the narrative — which harness failed in an embarrassing way, which
-succeeded for the wrong reason — is yours to write.
+*Write this section by hand after reviewing the traces above.* The auto-drafter
+has the numbers and the pointers; the narrative — which harness failed in an
+embarrassing way, which succeeded for the wrong reason — is yours to write.
 
-Representative failure traces live in `traces/{{harness}}/{{task_id}}/*.jsonl`.
-Open the trace viewer at `results/trace_viewer.html` for an annotatable view.
+Open the trace viewer at `results/trace_viewer.html` for a browsable view of
+every cell's trace, filterable by harness and task.
 
 ## Implications for harness design
 
@@ -225,6 +355,13 @@ reader can act on by 5pm tomorrow. Candidates: (1) cheaper harnesses that do
 one thing well often beat clever ones, (2) reflexion only helps when the
 critique is accurate, (3) a pruned context is a feature, not a bug, (4) raw
 HTML in context is surprisingly expensive even when the task is small.
+
+## Methodology
+
+- Freeze commit: `{freeze}` — resolve with `git rev-parse harnesses-frozen`
+- Gated files (not edited after freeze): `src/harness_eng/harnesses/`, `src/harness_eng/tools.py`, `src/harness_eng/model.py`
+- The runner's pre-flight `check_freeze_gate()` refuses to execute if any gated file has diverged from the tag
+- See `HARNESSES_FROZEN.md` at the repo root for per-file blob SHAs and the tag-move log
 
 ---
 *Generated from* `{Path(*agg.df_rows.attrs.get('run_path', Path('unknown')).parts[-2:]) if agg.df_rows.attrs.get('run_path') else 'unknown run'}` *. Numbers are reproducible — rerun `scripts/run_full.py`.*

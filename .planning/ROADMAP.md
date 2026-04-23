@@ -12,13 +12,13 @@ Most of the src/ scaffold is already committed: config, model, trace, tools, gra
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Audit and Harden Scaffold** - Retroactively validate the committed surface; freeze trace schema v1; harden grader; decide held-out fixtures
-- [ ] **Phase 2: Methodology Freeze** - Tag harnesses-frozen, record SHAs, pre-register hypothesis, add runner pre-flight diff check
-- [ ] **Phase 3: Multi-Seed + Statistics** - Require N>=3 seeds, Wilson 95% CIs, cost-per-success, chart error bars
-- [ ] **Phase 4: Runner Manifests + Tool-Allowlist Enforcement** - Expected/completed manifests; runner asserts API tools payload matches each harness's declared allowlist
-- [ ] **Phase 5: Matrix Execution** - One-shot operational run of 5 harnesses x 5 tasks x N seeds under the freeze tag
-- [ ] **Phase 6: Article Polish** - Fill "what surprised me" from traces; embed 2-3 annotated failure traces; cite freeze SHA + run dir
-- [ ] **Phase 7: CI Expansion + Onboarding Polish** - Windows matrix for grader determinism; README quickstart aligned with CI; .gitattributes for HTML/JSONL
+- [x] **Phase 1: Audit and Harden Scaffold** - Retroactively validate the committed surface; freeze trace schema v1; harden grader; decide held-out fixtures — `65ed6bd`
+- [x] **Phase 2: Methodology Freeze** - Tag harnesses-frozen, record SHAs, pre-register hypothesis, add runner pre-flight diff check — `389c31b` `b2965cd` `3bd1556`
+- [x] **Phase 3: Multi-Seed + Statistics** - Require N>=3 seeds, Wilson 95% CIs, cost-per-success, chart error bars — `9cd910a`
+- [x] **Phase 4: Runner Manifests + Tool-Allowlist Enforcement** - Expected/completed manifests; runner asserts API tools payload matches each harness's declared allowlist — `bca26d4` `4eacafb`
+- [ ] **Phase 5: Matrix Execution** - One-shot operational run of 5 harnesses x 5 tasks x N seeds under the freeze tag *(deferred to user — API spend gated)*
+- [ ] **Phase 6: Article Polish** - Fill "what surprised me" from traces; embed 2-3 annotated failure traces; cite freeze SHA + run dir *(blocked on Phase 5)*
+- [x] **Phase 7: CI Expansion + Onboarding Polish** - Windows matrix for grader determinism; README quickstart aligned with CI; .gitattributes for HTML/JSONL — `54f6285`
 
 ## Phase Details
 
