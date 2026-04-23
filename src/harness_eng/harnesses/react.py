@@ -18,6 +18,7 @@ REACT_TOOLS = ["read_html", "css_select", "extract_text", "submit_answer"]
 
 class ReActHarness(Harness):
     name = "react"
+    TOOL_WHITELIST = frozenset({"read_html", "css_select", "extract_text", "submit_answer"})
 
     def _execute(self, task: Task, ctx: ToolContext, tracer: Tracer, usage: _Usage) -> tuple[dict[str, str] | None, str]:
         system = (

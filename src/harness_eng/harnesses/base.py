@@ -55,8 +55,13 @@ class _Usage:
         self.turns += 1
 
 
+class ToolAllowlistViolation(RuntimeError):
+    """Raised when a harness passes a tool outside its declared TOOL_WHITELIST."""
+
+
 class Harness(ABC):
     name: str = "abstract"
+    TOOL_WHITELIST: frozenset[str] = frozenset()
 
     def __init__(self) -> None:
         pass
@@ -144,6 +149,15 @@ class Harness(ABC):
         tracer: Tracer,
         usage: _Usage,
     ) -> ModelCall:
+        if tools:
+            passed = {t["name"] for t in tools}
+            extra = passed - self.TOOL_WHITELIST
+            if extra:
+                raise ToolAllowlistViolation(
+                    f"Harness '{self.name}' passed tools outside its whitelist: "
+                    f"{sorted(extra)}. Whitelist is {sorted(self.TOOL_WHITELIST)}."
+                )
+            tracer.log("tool_payload", names=sorted(passed))
         tracer.log("model_call", system_len=len(system), n_messages=len(messages))
         mc = model_call(system, messages, tools)
         usage.record(mc)

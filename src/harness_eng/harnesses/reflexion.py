@@ -21,6 +21,7 @@ from .react import REACT_TOOLS
 
 class ReflexionHarness(Harness):
     name = "reflexion"
+    TOOL_WHITELIST = frozenset({"read_html", "css_select", "extract_text", "submit_answer"})
 
     def _execute(self, task: Task, ctx: ToolContext, tracer: Tracer, usage: _Usage) -> tuple[dict[str, str] | None, str]:
         first_pred, first_reason, first_trace_text = self._attempt(

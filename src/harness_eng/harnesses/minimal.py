@@ -20,6 +20,7 @@ MINIMAL_TOOLS = ["css_select", "submit_answer"]
 
 class MinimalHarness(Harness):
     name = "minimal"
+    TOOL_WHITELIST = frozenset({"css_select", "submit_answer"})
 
     def _execute(self, task: Task, ctx: ToolContext, tracer: Tracer, usage: _Usage) -> tuple[dict[str, str] | None, str]:
         system = (

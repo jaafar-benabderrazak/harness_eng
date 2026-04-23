@@ -16,6 +16,7 @@ from .base import BASE_ROLE, Harness, _Usage
 
 class SingleShotHarness(Harness):
     name = "single_shot"
+    TOOL_WHITELIST = frozenset({"submit_answer"})
 
     def _execute(self, task: Task, ctx: ToolContext, tracer: Tracer, usage: _Usage) -> tuple[dict[str, str] | None, str]:
         html = ctx.html()

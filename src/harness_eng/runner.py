@@ -71,36 +71,101 @@ def _result_row(hr: HarnessResult, expected: dict[str, str]) -> dict:
     return row
 
 
+def _manifest_paths(run_dir: Path, run_id: str) -> tuple[Path, Path, Path]:
+    return (
+        run_dir / f"{run_id}.jsonl",
+        run_dir / f"{run_id}.expected.jsonl",
+        run_dir / f"{run_id}.completed.jsonl",
+    )
+
+
+def _write_expected(expected_path: Path, cells: list[tuple[str, str, int]]) -> None:
+    with expected_path.open("w", encoding="utf-8") as fh:
+        for h, t, s in cells:
+            fh.write(json.dumps({"harness": h, "task_id": t, "seed": s}) + "\n")
+
+
+def _append_completed(completed_path: Path, harness: str, task_id: str, seed: int) -> None:
+    with completed_path.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps({"harness": harness, "task_id": task_id, "seed": seed}) + "\n")
+
+
+def _read_completed(completed_path: Path) -> set[tuple[str, str, int]]:
+    if not completed_path.exists():
+        return set()
+    done = set()
+    for line in completed_path.read_text(encoding="utf-8").splitlines():
+        if line.strip():
+            o = json.loads(line)
+            done.add((o["harness"], o["task_id"], int(o["seed"])))
+    return done
+
+
 def run_matrix(
     harness_names: Iterable[str],
     tasks: list[Task] | None = None,
     seeds: int = 3,
     run_dir: Path | None = None,
+    resume: Path | None = None,
 ) -> Path:
     check_freeze_gate()
     tasks = tasks or load_tasks()
-    run_id = time.strftime("%Y%m%d_%H%M%S") + "_" + uuid.uuid4().hex[:4]
-    run_dir = run_dir or RESULTS_DIR / "runs"
-    run_dir.mkdir(parents=True, exist_ok=True)
-    out_path = run_dir / f"{run_id}.jsonl"
+    harness_list = list(harness_names)
+    cells = [(h, t.id, s) for h in harness_list for t in tasks for s in range(seeds)]
 
-    with out_path.open("w", encoding="utf-8") as fh:
-        for harness_name in harness_names:
-            if harness_name not in HARNESSES:
-                raise KeyError(f"unknown harness: {harness_name}")
-            harness: Harness = HARNESSES[harness_name]()
-            for task in tasks:
-                for seed in range(seeds):
-                    cell_run_id = f"{run_id}-{seed}"
-                    hr = harness.run(task, run_id=cell_run_id)
-                    row = _result_row(hr, task.expected)
-                    row["seed"] = seed
-                    fh.write(json.dumps(row, default=str) + "\n")
-                    fh.flush()
-                    print(
-                        f"  {harness_name:<14} {task.id:<12} seed={seed} "
-                        f"success={row['success']} acc={row['field_accuracy']:.2f} "
-                        f"tok_in={hr.input_tokens} tok_out={hr.output_tokens} "
-                        f"tools={hr.tool_calls} t={hr.wall_clock_s:.1f}s"
-                    )
+    if resume is not None:
+        run_id = resume.stem
+        run_dir = resume.parent
+        out_path, expected_path, completed_path = _manifest_paths(run_dir, run_id)
+        already = _read_completed(completed_path)
+        results_mode = "a"
+    else:
+        run_id = time.strftime("%Y%m%d_%H%M%S") + "_" + uuid.uuid4().hex[:4]
+        run_dir = run_dir or RESULTS_DIR / "runs"
+        run_dir.mkdir(parents=True, exist_ok=True)
+        out_path, expected_path, completed_path = _manifest_paths(run_dir, run_id)
+        _write_expected(expected_path, cells)
+        already = set()
+        results_mode = "w"
+
+    task_by_id = {t.id: t for t in tasks}
+    harness_instances: dict[str, Harness] = {}
+    for h in harness_list:
+        if h not in HARNESSES:
+            raise KeyError(f"unknown harness: {h}")
+        harness_instances[h] = HARNESSES[h]()
+
+    with out_path.open(results_mode, encoding="utf-8") as fh:
+        for harness_name, task_id, seed in cells:
+            if (harness_name, task_id, seed) in already:
+                continue
+            harness = harness_instances[harness_name]
+            task = task_by_id[task_id]
+            cell_run_id = f"{run_id}-{seed}"
+            hr = harness.run(task, run_id=cell_run_id)
+            row = _result_row(hr, task.expected)
+            row["seed"] = seed
+            fh.write(json.dumps(row, default=str) + "\n")
+            fh.flush()
+            _append_completed(completed_path, harness_name, task_id, seed)
+            print(
+                f"  {harness_name:<14} {task_id:<12} seed={seed} "
+                f"success={row['success']} acc={row['field_accuracy']:.2f} "
+                f"tok_in={hr.input_tokens} tok_out={hr.output_tokens} "
+                f"tools={hr.tool_calls} t={hr.wall_clock_s:.1f}s"
+            )
     return out_path
+
+
+def missing_cells(run_path: Path) -> list[tuple[str, str, int]]:
+    """Return (harness, task_id, seed) triples listed in expected but not completed."""
+    run_id = run_path.stem
+    _, expected_path, completed_path = _manifest_paths(run_path.parent, run_id)
+    expected = []
+    if expected_path.exists():
+        for line in expected_path.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                o = json.loads(line)
+                expected.append((o["harness"], o["task_id"], int(o["seed"])))
+    done = _read_completed(completed_path)
+    return [c for c in expected if c not in done]

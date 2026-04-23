@@ -20,6 +20,7 @@ EXEC_TOOLS = ["css_select", "extract_text", "submit_answer"]
 
 class PlanExecuteHarness(Harness):
     name = "plan_execute"
+    TOOL_WHITELIST = frozenset({"css_select", "extract_text", "submit_answer"})
 
     def _execute(self, task: Task, ctx: ToolContext, tracer: Tracer, usage: _Usage) -> tuple[dict[str, str] | None, str]:
         plan = self._plan(task, tracer, usage)
