@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 # Same model, eight harnesses, two benchmarks
 
-*A two-part controlled experiment on agent harness design. One frozen model. Two task types. 150 runs. Source + data: [github.com/jaafar-benabderrazak/harness-bench](https://github.com/jaafar-benabderrazak/harness-bench). Freeze commit: `66fd2ec`.*
+*A two-part controlled experiment on agent harness design. One frozen model. Two task types. 150 runs. Source + data: [github.com/jaafar-benabderrazak/harness-bench](https://github.com/jaafar-benabderrazak/harness-bench). Freeze commit: `9977e85`.*
 
 ---
 
@@ -417,6 +417,6 @@ Everything reproduces locally. Zero API dollars. The run files for the numbers i
 - [`HARNESSES_FROZEN.md`](../HARNESSES_FROZEN.md) — freeze manifest + tag-move log
 - [`README.md`](../README.md) — quickstart, pre-registered hypothesis
 - Raw trace data lives in `traces/{harness}/{task}/*.jsonl`; every number here reproducible via `python scripts/make_chart.py` on a committed run file
-- Freeze commit: `66fd2ec` (`git rev-parse harnesses-frozen`)
+- Freeze commit: `9977e85` (`git rev-parse harnesses-frozen`)
 
 </details>
