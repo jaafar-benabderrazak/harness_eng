@@ -1,6 +1,7 @@
 ---
 layout: default
 title: "Same model, eight harnesses, two benchmarks (glm-4.7-flash, 2026-04-23)"
+description: "One frozen model, eight harnesses, two task types, 150 graded runs. A controlled experiment on whether harness complexity pays."
 ---
 
 <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
@@ -197,6 +198,8 @@ The multi-turn harnesses all share one problem: they try CSS selectors that don'
 
 Roughly two out of three tool calls are wasted guesses. The 12-turn cap is the only thing that stops most of the loops.
 
+The single most damning number in the whole matrix: an earlier N=15 run saw `plan_execute` fire the selector `span.date-submitted-date` **417 times** across the full 75 cells. That selector does not exist on any of the five pages. The planner invented it. The executor fired it into the void 417 times because the harness has no backchannel — once the plan is written, the executor can only follow it. **87.6%** of that run's `plan_execute` CSS-selector attempts returned nothing. Nearly nine in ten guesses were wrong, and only the 12-turn cap stopped the loop.
+
 Top-3 most-retried selectors per harness (across the whole matrix):
 
 ```text
@@ -323,6 +326,17 @@ The extra tokens are paying for "insurance against the first attempt failing." *
 
 All points sit at y=1.0 (perfect score). The only comparison is horizontal. `test_driven` is alone on the far right at 35k input tokens; everyone else sits around 6–9k. Almost a **6× gap** in tokens for identical accuracy.
 
+<details>
+<summary><b>What was surprising about the code-gen run</b></summary>
+
+Three things, none of them what I expected going in:
+
+1. **Every harness scored 100%.** I expected at least `retry_on_fail` to justify itself by rescuing a failed first attempt. It didn't — because no first attempts failed. `glm-4.7-flash` at `max_tokens=2048` solved every one of these five textbook algorithm problems on the first try, across 15 attempts per harness. A task set with ambiguous problems, tricky edge cases, or multi-file scope would produce a different shape; these are deliberately well-posed.
+2. **`chain_of_thought` is expensive and offered nothing here.** "Think step by step" is everywhere in agent-engineering posts. On these tasks it produced 2× wall-clock over `single_shot` with the same success rate. Reasoning tokens the model has to generate before getting to the answer, for answers it already had. Not an argument against CoT in general — multi-step math and constraint satisfaction likely need it — but the signal here is clear: toy algorithms the model knows by heart don't benefit.
+3. **`test_driven`'s tool-use is impressive but wasteful on this task set.** It successfully called `run_tests` 30 times across the matrix and responded correctly to pytest output. The plumbing works. But because the first draft was already correct, most of those 30 tool calls were "run tests on code I already know works" — pure confirmation. On tasks with a realistic first-attempt failure rate, this pattern would be valuable. Matching harness to task is everything.
+
+</details>
+
 ---
 
 ## The combined lesson
@@ -404,6 +418,5 @@ Everything reproduces locally. Zero API dollars. The run files for the numbers i
 - [`README.md`](../README.md) — quickstart, pre-registered hypothesis
 - Raw trace data lives in `traces/{harness}/{task}/*.jsonl`; every number here reproducible via `python scripts/make_chart.py` on a committed run file
 - Freeze commit: `66fd2ec` (`git rev-parse harnesses-frozen`)
-- Earlier standalone articles (kept for history): [article-glm-20260423](article-glm-20260423.html) (HTML only) and [article-code-glm-20260423](article-code-glm-20260423.html) (code only). This page is the combined + enhanced edition.
 
 </details>

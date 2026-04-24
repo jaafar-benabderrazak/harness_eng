@@ -9,9 +9,9 @@ title: harness_eng
 
 ## Read the writeup
 
-**[→ Full combined article](writeup/article.html)**
+**[→ Full combined article](writeup/article.html)** — one page, both experiments, all the forensics behind `<details>` toggles, Mermaid diagrams for every harness, and a cross-experiment conclusion.
 
-One page, both experiments, all the forensics behind `<details>` toggles, Mermaid diagrams for every harness, and a cross-experiment conclusion.
+**[→ LinkedIn-friendly version](writeup/article-linkedin.html)** — sharpened hook, plain-text flow, framework mapping (LangChain / LangGraph / CrewAI / Aider), and a "what this costs if you're paying by the token" extrapolation. Same data, different audience.
 
 ## The one-line finding
 
@@ -52,15 +52,3 @@ python scripts/make_chart.py
 ```
 
 Fully local. Zero dollars.
-
----
-
-<details>
-<summary><b>Standalone earlier writeups (kept for history)</b></summary>
-
-The [combined article](writeup/article.html) supersedes these but the originals are preserved:
-
-- [article-glm-20260423](writeup/article-glm-20260423.html) — HTML extraction only
-- [article-code-glm-20260423](writeup/article-code-glm-20260423.html) — code generation only
-
-</details>
