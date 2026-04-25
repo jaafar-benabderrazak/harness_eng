@@ -5,7 +5,7 @@ title: harness_eng
 
 # harness_eng
 
-**Same model, eight harnesses, two benchmarks.** A controlled experiment that holds one LLM constant and varies only the agent harness around it. Two task types (HTML extraction + Python code generation), 150 graded runs, one consistent methodology lesson.
+**Same model, sixteen harnesses, two tasks.** A controlled experiment that holds one LLM constant and varies only the agent harness around it. Two task types (HTML extraction + Python code generation). **Eight harnesses benchmarked end-to-end** (150 graded runs producing the published numbers); **eight more cataloged** in Phase 8 — every common agent pattern named, mapped to its real-world framework analog, implemented + unit-tested against freeze tag `2af30fc`, matrix re-run gated on hardware (the configured model needs more memory than this host has). One consistent methodology lesson on the benchmarked half; a structured catalog on the cataloged half so a reader can map the design space without waiting for the rerun.
 
 ## Read the writeup
 
@@ -27,10 +27,13 @@ Both experiments converge: complex harnesses pay returns only where the base mod
 ## Repository
 
 - **Repo**: [github.com/jaafar-benabderrazak/harness-bench](https://github.com/jaafar-benabderrazak/harness-bench)
-- **8 harnesses**: `single_shot`, `react`, `plan_execute`, `reflexion`, `minimal` (HTML family) + `chain_of_thought`, `test_driven`, `retry_on_fail` (code-gen family). `single_shot` and `react` run on both task types.
+- **16 harnesses** across two families:
+  - **Benchmarked (8)**: `single_shot`, `react`, `plan_execute`, `reflexion`, `minimal`, `chain_of_thought`, `test_driven`, `retry_on_fail`
+  - **Cataloged (8)**: `multi_agent`, `self_consistency`, `tool_use_with_validation`, `tree_of_thoughts`, `react_with_replan`, `cached_react`, `program_aided`, `streaming_react` (registered in code but excluded from the matrix per Ollama OOM finding)
+- Each harness maps to a real-world agent-engineering pattern (LangChain `AgentExecutor`, LangGraph plan-and-execute, CrewAI/AutoGen multi-agent, Reflexion paper, ToT paper, PaL paper, Wang et al. self-consistency, Aider/Cursor/Devin TDD loops, …). The article gives every analog explicitly.
 - **2 task types**: `html_extract` (per-field normalized exact match) + `code_gen` (pytest subprocess).
-- **55 tests** pass offline (no API key). CI runs on Ubuntu + Windows.
-- Freeze tag `harnesses-frozen` pins the comparison; the runner refuses to execute if any gated file has drifted.
+- **87 tests** pass offline (no API key). CI runs on Ubuntu + Windows.
+- Freeze tag `harnesses-frozen` (currently `2af30fc`) pins the comparison; the runner refuses to execute if any gated file has drifted.
 
 ## Reproduce either experiment
 
@@ -39,7 +42,7 @@ git clone https://github.com/jaafar-benabderrazak/harness-bench && cd harness-be
 pip install -e ".[dev]"
 cp .env.example .env         # ollama + glm-4.7-flash default, no API key
 ollama pull glm-4.7-flash:latest
-pytest -q                    # 55 tests, all offline
+pytest -q                    # 87 tests, all offline
 
 # HTML extraction (~60 min)
 python scripts/run_full.py --seeds 3 --yes

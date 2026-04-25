@@ -1,7 +1,7 @@
 ---
 layout: default
-title: "Same model, eight harnesses, two benchmarks (glm-4.7-flash, 2026-04-23)"
-description: "One frozen model, eight harnesses, two task types, 150 graded runs. A controlled experiment on whether harness complexity pays."
+title: "Same model, sixteen harnesses, two tasks (glm-4.7-flash, 2026-04-23)"
+description: "One frozen model, sixteen harnesses (eight benchmarked, eight cataloged), two task types, 150 graded runs. A controlled experiment on whether harness complexity pays — plus a structured catalog of every common agent pattern, mapped to the framework you already use."
 ---
 
 <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
@@ -18,9 +18,9 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
-# Same model, eight harnesses, two benchmarks
+# Same model, sixteen harnesses, two tasks
 
-*A two-part controlled experiment on agent harness design. One frozen model. Two task types. 150 runs. Source + data: [github.com/jaafar-benabderrazak/harness-bench](https://github.com/jaafar-benabderrazak/harness-bench). Numerical results in Part 1 and Part 2 are from `glm-4.7-flash` against freeze tag `9977e85` on 2026-04-23. Freeze tag has since moved to `2af30fc` (16-harness expansion — see "Phase 8 expansion" below); the new harnesses are implemented and tested but not yet matrix-validated on this hardware.*
+*A controlled experiment on agent harness design. One frozen model. Two task types. **Eight harnesses benchmarked** (150 graded runs producing the numbers in Part 1 and Part 2) plus **eight more cataloged** in Phase 8 — every common agent pattern named, mapped to a real-world framework, implemented and unit-tested but not yet matrix-validated on the current hardware. Source + data: [github.com/jaafar-benabderrazak/harness-bench](https://github.com/jaafar-benabderrazak/harness-bench). Numerical results were produced against freeze tag `9977e85` on 2026-04-23; the library has since expanded to 16 harnesses at freeze tag `2af30fc`.*
 
 ---
 
@@ -28,17 +28,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
 ```mermaid
 flowchart LR
-    M[glm-4.7-flash<br/>temperature 0<br/>local Ollama] --> H1[5 HTML harnesses<br/>single_shot, react,<br/>plan_execute, reflexion,<br/>minimal]
-    M --> H2[5 code-gen harnesses<br/>single_shot, react,<br/>chain_of_thought, test_driven,<br/>retry_on_fail]
-    H1 --> B1[5 messy HTML pages<br/>extract 3-5 fields<br/>× 3 seeds = 75 cells]
-    H2 --> B2[5 Python functions<br/>pass pytest suite<br/>× 3 seeds = 75 cells]
-    B1 --> R1[pull numbers:<br/>spread in success,<br/>time, tokens]
-    B2 --> R2[pull numbers:<br/>spread in time, tokens<br/>everyone hit 100%]
-    R1 --> C[cross-experiment finding]
-    R2 --> C
+    M[glm-4.7-flash<br/>temperature 0<br/>local Ollama] --> P1[Phase 1-7<br/>8 harnesses<br/>BENCHMARKED]
+    M --> P8[Phase 8<br/>8 more harnesses<br/>CATALOGED]
+    P1 --> B1[5 HTML pages × 3 seeds<br/>+ 5 Python tasks × 3 seeds<br/>= 150 cells]
+    P8 --> X[freeze tag 9977e85 → 2af30fc<br/>tests green<br/>matrix re-run gated on hardware]
+    B1 --> R[Part 1 + Part 2 numbers:<br/>success, wall-clock, tokens<br/>cross-experiment finding]
+    X --> R
+    classDef bench fill:#dff5e0,stroke:#3a7d44,color:#000
+    classDef cat fill:#fff3cd,stroke:#a6791d,color:#000
+    class P1 bench
+    class P8 cat
 ```
 
-Same model. Two task types. Eight harnesses across both (five per task type, some shared). **150 graded runs, zero dollars** (open-source model, local inference).
+Same model. Two task types. **Sixteen harnesses total** — eight benchmarked end-to-end (the 150 graded runs that produce the numbers below), eight more cataloged as a structured map of the agent-framework patterns this experiment is designed to test. Zero API dollars throughout (open-source model, local inference).
 
 ---
 
@@ -72,11 +74,13 @@ Running two separate experiments — one where the tasks are genuinely hard for 
 
 ---
 
-## The eight harnesses
+## The eight benchmarked harnesses
 
-All eight inherit from the same `Harness` base class. What varies is the control flow. Each has a `TOOL_WHITELIST` enforced by the runner so you cannot add a tool by accident. Every harness terminates by calling the same `submit_answer` tool — parsing free-form text for a JSON answer is a huge confound on weaker models, so the tool channel acts as a schema-enforcing chokepoint. `single_shot` hit **100% schema compliance** on both task types.
+All sixteen harnesses inherit from the same `Harness` base class. What varies is the control flow. Each has a `TOOL_WHITELIST` enforced by the runner so you cannot add a tool by accident. Every harness terminates by calling the same `submit_answer` tool — parsing free-form text for a JSON answer is a huge confound on weaker models, so the tool channel acts as a schema-enforcing chokepoint. `single_shot` hit **100% schema compliance** on both task types.
 
-Each description below includes the real-world analog — the LangChain / LangGraph / CrewAI / framework pattern this harness matches — so you can map the finding to code you're already running.
+The eight described below produced the numbers in Part 1 and Part 2 (150 graded runs total). The other eight — added in Phase 8 — are cataloged later in this article with the same template but without fresh numerical data.
+
+Each description includes the real-world analog — the LangChain / LangGraph / CrewAI / framework pattern this harness matches — so you can map the finding to code you're already running.
 
 ### HTML-extraction family (5 harnesses)
 
@@ -265,7 +269,50 @@ The matrix above (10 cells per row, 2026-04-23 numbers) covers the original 8 ha
 
 **These 8 are NOT numerically benchmarked in this article.** The freeze tag has moved to `2af30fc` and the full implementation + 87/87 unit tests sit at that commit, but the matrix re-run on this hardware is gated on a memory ceiling that the current model cannot clear. The next subsection ("Phase 8: harness expansion without matrix rerun") explains the constraint honestly.
 
-What follows is qualitative description for each harness — the same template as the 8 above (what-it-does / in-production / strengths / weaknesses / use-when / Mermaid diagram) — so a reader can map the design space even without fresh numbers.
+### The implementation surface — 16 harnesses, two task types
+
+Before the per-harness descriptions, here's the structural map of which harness exists for which task type. Streaming-react is registered in code but excluded from the matrix per the Ollama OOM finding in `08-05-VERIFY.md`.
+
+```mermaid
+flowchart LR
+    subgraph BENCHMARKED["BENCHMARKED · 8 harnesses · 150 cells in Part 1 + Part 2"]
+        direction TB
+        B1[single_shot · both]
+        B2[react · both]
+        B3[plan_execute · HTML]
+        B4[reflexion · HTML]
+        B5[minimal · HTML]
+        B6[chain_of_thought · code]
+        B7[test_driven · code]
+        B8[retry_on_fail · code]
+    end
+    subgraph CATALOGED["CATALOGED · 8 harnesses · implemented + tested · matrix re-run gated on hardware"]
+        direction TB
+        C1[multi_agent · both]
+        C2[self_consistency · both]
+        C3[tool_use_with_validation · both]
+        C4[tree_of_thoughts · HTML]
+        C5[react_with_replan · HTML]
+        C6[cached_react · HTML]
+        C7[program_aided · code]
+        C8[streaming_react · HTML — registered but excluded · OOM]
+    end
+    classDef bench fill:#dff5e0,stroke:#3a7d44,color:#000
+    classDef cat fill:#fff3cd,stroke:#a6791d,color:#000
+    classDef excluded fill:#f8d7da,stroke:#a02f2f,color:#000
+    class B1,B2,B3,B4,B5,B6,B7,B8 bench
+    class C1,C2,C3,C4,C5,C6,C7 cat
+    class C8 excluded
+```
+
+Coverage by task type after Phase 8:
+
+| Task type | Benchmarked | Cataloged | Total registered |
+|-----------|------------:|----------:|-----------------:|
+| HTML extraction (`html_extract`) | 5 | 6 | **11** |
+| Code generation (`code_gen`) | 5 | 4 | **9** |
+
+What follows is qualitative description for each new harness — the same template as the eight above (what-it-does / in-production / strengths / weaknesses / use-when / Mermaid diagram) — so a reader can map the design space even without fresh numbers.
 
 ### The 8 new harnesses
 
@@ -484,18 +531,39 @@ flowchart TB
     end
 ```
 
-### Framework mapping for the new harnesses
+### Framework analog map — every harness, mapped to where you've already seen it
 
-The original 8 harnesses each map to a recognizable agent-engineering pattern. So do these 8:
+If you build agents in any current framework, your team is already running one or more of these patterns. The map below pins each of the 16 harnesses in this experiment to its real-world equivalent, so you can read "harness X scored Y" as "the LangGraph plan-and-execute pattern (or whatever you're using) scored Y on this matrix."
 
-- `tree_of_thoughts` → **Yao et al. 2023** (Tree of Thoughts paper; this harness uses heuristic scoring instead of model self-eval)
-- `multi_agent` → **CrewAI / AutoGen / LangGraph** multi-agent topologies (isolated histories, structured handoffs)
-- `react_with_replan` → **loop-detection + recovery** patterns (stall-detector with cheap intervention)
-- `self_consistency` → **Wang et al. 2022** (Self-Consistency Improves Chain of Thought)
-- `program_aided` → **Gao et al. 2022** (PaL: Program-Aided Language Models — execution during reasoning, not after)
-- `tool_use_with_validation` → **Pydantic-style argument validation** / defensive tool dispatch with retry budget
-- `streaming_react` → **Anthropic streaming tool-use early-termination** (mid-stream break on tool detection)
-- `cached_react` → **in-memory result memoization** (cell-scoped — explicitly NOT a cross-run cache)
+```mermaid
+flowchart LR
+    H1[single_shot] --> A1[Direct API call · no framework]
+    H2[react] --> A2[LangChain AgentExecutor · classic ReAct]
+    H3[plan_execute] --> A3[LangGraph plan-and-execute · OpenAI Agents SDK planner]
+    H4[reflexion] --> A4[Reflexion paper · CrewAI critic agents]
+    H5[minimal] --> A5[Token-budget-conscious ReAct · disabled HTML reads]
+    H6[chain_of_thought] --> A6['Think step by step' system prompt]
+    H7[test_driven] --> A7[Aider · Cursor agent mode · Devin-style loops]
+    H8[retry_on_fail] --> A8[CI-style retry · attempts + structured feedback]
+
+    H9[multi_agent] --> A9[CrewAI · AutoGen · LangGraph multi-node]
+    H10[self_consistency] --> A10[Wang et al. 2022 · sample-N + majority vote]
+    H11[tool_use_with_validation] --> A11[Pydantic-style validation · defensive dispatch]
+    H12[tree_of_thoughts] --> A12[Yao et al. 2023 · heuristic-scored variant]
+    H13[react_with_replan] --> A13[Loop-detection + recovery · stall trigger]
+    H14[cached_react] --> A14[Cell-scoped tool-result memoization]
+    H15[program_aided] --> A15[Gao et al. 2022 PaL · code AS reasoning]
+    H16[streaming_react] --> A16[Anthropic streaming early-termination]
+
+    classDef bench fill:#dff5e0,stroke:#3a7d44,color:#000
+    classDef cat fill:#fff3cd,stroke:#a6791d,color:#000
+    classDef excluded fill:#f8d7da,stroke:#a02f2f,color:#000
+    class H1,H2,H3,H4,H5,H6,H7,H8 bench
+    class H9,H10,H11,H12,H13,H14,H15 cat
+    class H16 excluded
+```
+
+Green = benchmarked (numbers in Part 1 + Part 2 below). Yellow = cataloged (implemented + tested at freeze tag `2af30fc`, matrix re-run gated on hardware). Red = registered in code but excluded from the matrix (Ollama OOM on the configured model).
 
 Combined with the original 8, the matrix design space now covers: zero-framework (`single_shot`), canonical loops (`react`, `minimal`), planning (`plan_execute`), self-critique (`reflexion`), reasoning (`chain_of_thought`), test-driven loops (`test_driven`, `retry_on_fail`), candidate generation (`tree_of_thoughts`), multi-agent topologies (`multi_agent`), stall recovery (`react_with_replan`), sample voting (`self_consistency`), program-aided reasoning (`program_aided`), defensive tool dispatch (`tool_use_with_validation`), streaming optimization (`streaming_react`), and result memoization (`cached_react`).
 

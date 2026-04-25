@@ -1,8 +1,8 @@
 # harness_eng
 
-**Same model, eight harnesses, two benchmarks.**
+**Same model, sixteen harnesses, two tasks.**
 
-A controlled experiment: hold the model constant, vary the scaffolding, measure the spread in success rate and cost across two task types. Ran against an open-source local model (`glm-4.7-flash` via Ollama) by default; Anthropic backend swappable via `.env`.
+A controlled experiment: hold the model constant, vary the scaffolding, measure the spread in success rate and cost across two task types. Eight harnesses benchmarked end-to-end (150 graded runs at freeze tag `9977e85`, 2026-04-23) and **eight more cataloged in Phase 8** (implemented + unit-tested at freeze tag `2af30fc`, matrix re-run gated on stronger hardware than this host carries). Default backend is an open-source local model (`glm-4.7-flash` via Ollama); Anthropic backend swappable via `.env`.
 
 ## The setup
 
@@ -10,9 +10,14 @@ A controlled experiment: hold the model constant, vary the scaffolding, measure 
   - `html_extract` — pull 3–5 structured fields from messy HTML. Deterministic per-field normalized exact-match grader.
   - `code_gen` — implement a Python function that passes a pytest suite. Deterministic grader via `pytest` subprocess (exit 0 = success).
 - **Model**: frozen. Default `glm-4.7-flash:latest` via Ollama (local, 19 GB, no API key, zero dollars). Anthropic/Claude backend available by setting `HARNESS_BACKEND=anthropic` + `HARNESS_MODEL=claude-sonnet-4-6` in `.env`. Temperature 0, `max_tokens=2048`. Set once in `src/harness_eng/config.py` / `.env`. Every harness routes through `model.call()`.
-- **Eight harnesses** (five per task type; `single_shot` and `react` run on both):
-  - HTML-extraction family: `single_shot`, `react`, `plan_execute`, `reflexion`, `minimal`
-  - Code-generation family: `single_shot`, `react`, `chain_of_thought`, `test_driven`, `retry_on_fail`
+- **Sixteen harnesses** registered (`HARNESSES_BY_TASK_TYPE` lists 11 for HTML + 9 for code-gen; some run on both):
+  - **Benchmarked (numbers in writeup/article.md):**
+    - HTML-extraction family: `single_shot`, `react`, `plan_execute`, `reflexion`, `minimal`
+    - Code-generation family: `single_shot`, `react`, `chain_of_thought`, `test_driven`, `retry_on_fail`
+  - **Cataloged (Phase 8 — implemented + unit-tested at freeze tag `2af30fc`, matrix re-run gated on hardware):**
+    - Both task types: `multi_agent` (CrewAI/AutoGen), `self_consistency` (Wang et al. 2022), `tool_use_with_validation` (Pydantic-style validation)
+    - HTML only: `tree_of_thoughts` (Yao et al. 2023, heuristic variant), `react_with_replan` (loop-detection), `cached_react` (cell-scoped memoization), `streaming_react` (Anthropic streaming early-termination — registered but excluded from matrix per Ollama OOM)
+    - Code-gen only: `program_aided` (Gao et al. 2022 PaL — code AS reasoning)
 - **Metrics per run**: success (0/1 per field/test + overall), input/output tokens, tool calls, wall-clock, stop reason.
 - **Traces**: every model call and tool invocation appended to `traces/{harness}/{task_id}/{run_id}.jsonl` from the first call, not retrofitted.
 
