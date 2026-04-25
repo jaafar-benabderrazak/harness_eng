@@ -35,11 +35,14 @@ def call(
     system: str,
     messages: list[dict[str, Any]],
     tools: list[dict[str, Any]] | None = None,
+    *,
+    temperature: float | None = None,
 ) -> ModelCall:
-    """Single entry point. Routes to the configured backend; returns uniform ModelCall."""
+    """Single entry point. Per-call temperature overrides CONFIG default."""
+    eff_temp = CONFIG.model.temperature if temperature is None else temperature
     if CONFIG.model.backend == "ollama":
-        return _call_ollama(system, messages, tools)
-    return _call_anthropic(system, messages, tools)
+        return _call_ollama(system, messages, tools, temperature=eff_temp)
+    return _call_anthropic(system, messages, tools, temperature=eff_temp)
 
 
 # ---------------------------------------------------------------------------
@@ -59,12 +62,14 @@ def _call_anthropic(
     system: str,
     messages: list[dict[str, Any]],
     tools: list[dict[str, Any]] | None,
+    *,
+    temperature: float,
 ) -> ModelCall:
     client = _get_client()
     kwargs: dict[str, Any] = {
         "model": CONFIG.model.name,
         "max_tokens": CONFIG.model.max_tokens,
-        "temperature": CONFIG.model.temperature,
+        "temperature": temperature,
         "system": system,
         "messages": messages,
     }
@@ -199,13 +204,15 @@ def _call_ollama(
     system: str,
     messages: list[dict[str, Any]],
     tools: list[dict[str, Any]] | None,
+    *,
+    temperature: float,
 ) -> ModelCall:
     import ollama  # deferred — installed only when backend=ollama
 
     om = _to_ollama_messages(system, messages)
     ot = _to_ollama_tools(tools)
     options: dict[str, Any] = {
-        "temperature": CONFIG.model.temperature,
+        "temperature": temperature,
         "num_predict": CONFIG.model.max_tokens,
     }
     t0 = time.perf_counter()

@@ -76,3 +76,67 @@ def test_usage_raw_populated(monkeypatch):
     }
     assert mc.input_tokens == 100
     assert mc.output_tokens == 50
+
+
+def test_call_uses_config_temperature_by_default(monkeypatch):
+    """No temperature kwarg → CONFIG.model.temperature."""
+    _force_anthropic_backend(monkeypatch)
+    captured: dict = {}
+
+    class FakeUsage:
+        input_tokens = 1
+        output_tokens = 1
+
+        def model_dump(self):
+            return {"input_tokens": 1, "output_tokens": 1}
+
+    class FakeResp:
+        usage = FakeUsage()
+        stop_reason = "end_turn"
+        content = []
+
+    class FakeMessages:
+        def create(self, **kw):
+            captured.update(kw)
+            return FakeResp()
+
+    class FakeClient:
+        messages = FakeMessages()
+
+    monkeypatch.setattr(model_module, "_client", FakeClient())
+    model_module.call(system="s", messages=[{"role": "user", "content": "x"}])
+    assert captured["temperature"] == model_module.CONFIG.model.temperature
+
+
+def test_call_temperature_kwarg_overrides_config(monkeypatch):
+    """temperature=0.7 overrides CONFIG.model.temperature for that call."""
+    _force_anthropic_backend(monkeypatch)
+    captured: dict = {}
+
+    class FakeUsage:
+        input_tokens = 1
+        output_tokens = 1
+
+        def model_dump(self):
+            return {"input_tokens": 1, "output_tokens": 1}
+
+    class FakeResp:
+        usage = FakeUsage()
+        stop_reason = "end_turn"
+        content = []
+
+    class FakeMessages:
+        def create(self, **kw):
+            captured.update(kw)
+            return FakeResp()
+
+    class FakeClient:
+        messages = FakeMessages()
+
+    monkeypatch.setattr(model_module, "_client", FakeClient())
+    model_module.call(
+        system="s",
+        messages=[{"role": "user", "content": "x"}],
+        temperature=0.7,
+    )
+    assert captured["temperature"] == 0.7
