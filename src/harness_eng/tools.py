@@ -105,6 +105,28 @@ def _tool_run_tests(ctx: ToolContext, code: str, **_: Any) -> str:
     return f"[{status} rc={proc.returncode}]\n{out}"
 
 
+def _tool_run_python(ctx: ToolContext, code: str, **_: Any) -> str:
+    """Execute Python code as a standalone script in a temp subprocess (5s timeout).
+    Returns rc + truncated stdout/stderr. Used by program_aided to verify intermediate values."""
+    with tempfile.TemporaryDirectory() as td:
+        src = Path(td) / "snippet.py"
+        src.write_text(code, encoding="utf-8")
+        try:
+            proc = subprocess.run(
+                [sys.executable, str(src)],
+                cwd=td,
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+        except subprocess.TimeoutExpired:
+            return "TIMEOUT: snippet did not complete within 5s."
+    out = (proc.stdout + proc.stderr).strip()
+    if len(out) > 1500:
+        out = out[:1500] + "\n...[truncated]"
+    return f"[rc={proc.returncode}]\n{out}"
+
+
 SUBMIT_ANSWER_TOOL = "submit_answer"
 
 
@@ -114,6 +136,7 @@ TOOL_IMPLS: dict[str, Callable[..., str]] = {
     "extract_text": _tool_extract_text,
     "check_syntax": _tool_check_syntax,
     "run_tests": _tool_run_tests,
+    "run_python": _tool_run_python,
 }
 
 
@@ -149,6 +172,15 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
     "run_tests": {
         "name": "run_tests",
         "description": "Run the task's pytest suite against your candidate Python code. Returns a short pass/fail summary.",
+        "input_schema": {
+            "type": "object",
+            "properties": {"code": {"type": "string"}},
+            "required": ["code"],
+        },
+    },
+    "run_python": {
+        "name": "run_python",
+        "description": "Execute Python code as a standalone script in a temp subprocess (5s timeout). Returns rc + truncated stdout/stderr. Use to verify intermediate values during reasoning.",
         "input_schema": {
             "type": "object",
             "properties": {"code": {"type": "string"}},

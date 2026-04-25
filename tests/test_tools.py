@@ -40,3 +40,18 @@ def test_submit_answer_schema_accepts_both_payloads():
     props = schema["input_schema"]["properties"]
     assert "fields" in props
     assert "code" in props
+
+
+def test_run_python_returns_stdout():
+    from harness_eng.tools import dispatch, ToolContext
+    ctx = ToolContext()
+    out = dispatch("run_python", ctx, code="print('hello')")
+    assert "[rc=0]" in out
+    assert "hello" in out
+
+
+def test_run_python_timeout_killable():
+    from harness_eng.tools import dispatch, ToolContext
+    ctx = ToolContext()
+    out = dispatch("run_python", ctx, code="import time; time.sleep(10)")
+    assert "TIMEOUT" in out
