@@ -21,16 +21,25 @@ from .pricing import cost_usd  # noqa: E402
 
 # Project-wide palette so the same harness gets the same color in every chart.
 HARNESS_COLORS: dict[str, str] = {
-    # HTML-extraction family
-    "single_shot":      "#2563eb",  # blue
-    "react":            "#dc2626",  # red
-    "plan_execute":     "#9333ea",  # purple
-    "reflexion":        "#ea580c",  # orange
-    "minimal":          "#059669",  # green
-    # Code-gen family
-    "chain_of_thought": "#db2777",  # pink
-    "test_driven":      "#0891b2",  # teal
-    "retry_on_fail":    "#ca8a04",  # amber
+    # HTML-extraction family (Phase 1-7)
+    "single_shot":              "#2563eb",  # blue
+    "react":                    "#dc2626",  # red
+    "plan_execute":             "#9333ea",  # purple
+    "reflexion":                "#ea580c",  # orange
+    "minimal":                  "#059669",  # green
+    # Code-gen family (Phase 1-7)
+    "chain_of_thought":         "#db2777",  # pink
+    "test_driven":              "#0891b2",  # teal
+    "retry_on_fail":            "#ca8a04",  # amber
+    # Phase 8 — agent-pattern family
+    "tree_of_thoughts":         "#7c3aed",  # violet
+    "multi_agent":              "#0d9488",  # teal-dark
+    "react_with_replan":        "#b91c1c",  # red-dark
+    "self_consistency":         "#1d4ed8",  # blue-dark
+    "program_aided":            "#a16207",  # amber-dark
+    "tool_use_with_validation": "#16a34a",  # green-mid
+    "streaming_react":          "#e11d48",  # rose
+    "cached_react":             "#7e22ce",  # purple-dark
 }
 
 
