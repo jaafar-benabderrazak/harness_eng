@@ -56,7 +56,7 @@ def test_step_model_accepts_subset_of_whitelist(monkeypatch):
     from harness_eng.harnesses import base as base_module
     from harness_eng.model import ModelCall
 
-    def fake_call(system, messages, tools):
+    def fake_call(system, messages, tools, **_kw):
         return ModelCall(
             input_tokens=1, output_tokens=1, latency_s=0.0,
             stop_reason="end_turn", content=[], usage_raw={},

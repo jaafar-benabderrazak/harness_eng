@@ -155,6 +155,8 @@ class Harness(ABC):
         tools: list[dict[str, Any]] | None,
         tracer: Tracer,
         usage: _Usage,
+        *,
+        temperature: float | None = None,
     ) -> ModelCall:
         if tools:
             passed = {t["name"] for t in tools}
@@ -165,8 +167,13 @@ class Harness(ABC):
                     f"{sorted(extra)}. Whitelist is {sorted(self.TOOL_WHITELIST)}."
                 )
             tracer.log("tool_payload", names=sorted(passed))
-        tracer.log("model_call", system_len=len(system), n_messages=len(messages))
-        mc = model_call(system, messages, tools)
+        tracer.log(
+            "model_call",
+            system_len=len(system),
+            n_messages=len(messages),
+            temperature=temperature,
+        )
+        mc = model_call(system, messages, tools, temperature=temperature)
         usage.record(mc)
         tracer.log(
             "model_response",
