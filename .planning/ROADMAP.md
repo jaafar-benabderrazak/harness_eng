@@ -19,6 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 5: Matrix Execution** - One-shot operational run of 5 harnesses x 5 tasks x N seeds under the freeze tag *(deferred to user — API spend gated)*
 - [ ] **Phase 6: Article Polish** - Fill "what surprised me" from traces; embed 2-3 annotated failure traces; cite freeze SHA + run dir *(blocked on Phase 5)*
 - [x] **Phase 7: CI Expansion + Onboarding Polish** - Windows matrix for grader determinism; README quickstart aligned with CI; .gitattributes for HTML/JSONL — `54f6285`
+- [ ] **Phase 8: Expand Harness Family + Refresh Article** - Add 8 new harness strategies that map to popular agent patterns (CrewAI multi-agent, ToT paper, PaL paper, self-consistency, tool-use-with-validation, streaming early-termination, react-with-replan, cached-react); rerun both matrices; refresh article + Medium HTML.
 
 ## Phase Details
 
@@ -106,10 +107,34 @@ Plans:
   4. README onboarding is timed (by the author or a friend) at under 5 minutes install-to-pilot-chart on a clean Windows + Git Bash machine.
 **Plans**: TBD
 
+### Phase 8: Expand Harness Family + Refresh Article
+**Goal**: The harness library expands from 8 to 16 distinct strategies, each mapping to a recognizable agent pattern (CrewAI, AutoGen, ToT-paper, PaL-paper, self-consistency, retry-with-replan, streaming-early-termination, tool-result-caching). The full matrix re-runs on the expanded set under a new `harnesses-frozen` tag move. The article and Medium HTML are updated to integrate every new harness into the per-harness description block, framework-mapping section, and findings tables.
+**Depends on**: Phase 7
+**Requirements**: HARN-08, HARN-09, HARN-10, HARN-11, HARN-12, HARN-13, HARN-14, HARN-15, BENCH-06, RUN-07, ANAL-06, ART-05
+**Success Criteria** (what must be TRUE):
+  1. Eight new harness files exist under `src/harness_eng/harnesses/` with `TOOL_WHITELIST`, `harness_id`, and a `task_type` set (`html_extract`, `code_gen`, or both). All eight pass the AST seal test, tool-allowlist enforcement, freeze-gate diff check, and a per-harness pytest fixture (model-mocked) that asserts the control flow follows the documented pattern.
+  2. The eight harnesses are: **`tree_of_thoughts`** (HTML — proposes N=3 candidate selectors, scores each against partial HTML, picks highest); **`multi_agent`** (both — distinct planner / executor / critic system prompts with structured handoffs); **`react_with_replan`** (HTML — detects loop signatures in its own trace and triggers a `replan` model call when it stalls); **`self_consistency`** (both — wraps single_shot, samples N=5 at temperature > 0, majority-vote over normalized answers); **`program_aided`** (code-gen — model emits Python it executes via `run_python` tool to verify intermediate values, then submits final answer; distinct from `test_driven` because execution is *during reasoning*, not *as grading*); **`tool_use_with_validation`** (both — every tool call is JSON-schema-validated by the harness; on schema mismatch the harness emits a structured error tool_result and retries up to 3 times before failing the cell); **`streaming_react`** (HTML — uses streaming responses; harness terminates the stream as soon as a `submit_answer` token sequence is detected, not waiting for the full response); **`cached_react`** (HTML — memoizes `(html_hash, selector)` → result tuples in a process-local dict so repeated selectors within a cell return cached results; documented determinism caveat: cache is cell-scoped, not run-scoped, so seeds remain independent).
+  3. `runner.py` registers the new harnesses in `HARNESSES_BY_TASK_TYPE` and the matrix reflects the expanded set without breaking pre-existing harnesses. Runner pre-flight gate (Phase 2) still passes — only `harnesses/`, `runner.py` registration, and `tools.py` (if a new tool is added for `program_aided`) change in this phase.
+  4. The freeze tag `harnesses-frozen` moves forward to a single commit AFTER all eight harnesses are merged but BEFORE the matrix re-runs against them. The move is logged in `HARNESSES_FROZEN.md` with reason "Phase 8 harness expansion" and the per-file SHAs at the new tag.
+  5. Both matrices re-run end-to-end via `python scripts/run_full.py --seeds 3 --yes` (HTML, ~12 harnesses × 5 tasks × 3 seeds = ~180 cells) and `python scripts/run_code_benchmark.py --seeds 3 --yes` (~9 harnesses × 5 tasks × 3 seeds = ~135 cells). All cells appear in `runs_completed.jsonl`; manifest diff is empty; Wilson 95% CIs computed per harness.
+  6. `writeup/article.md` updated: each new harness gets a structured description block matching the existing template (what-it-does / in-production / strengths / weaknesses / use-when / Mermaid diagram). Framework-mapping bullets gain entries for `multi_agent → CrewAI/AutoGen`, `tree_of_thoughts → ToT paper (Yao et al. 2023)`, `program_aided → PaL paper (Gao et al. 2022)`, `self_consistency → Wang et al. 2022`, `tool_use_with_validation → Pydantic-style validation pattern`, `streaming_react → early-termination on tool-use streams`, `cached_react → in-memory result memoization`, `react_with_replan → loop-detection + recovery`. Numerical findings folded into Part 1 (HTML) and Part 2 (code-gen) tables and prose.
+  7. `writeup/article-medium.html` regenerated via `scripts/build_medium_html.py`. Diagram PNGs for the eight new harnesses exist under `writeup/diagrams/`. The matrix tables in the HTML reflect the expanded harness set.
+  8. The dollar-extrapolation table in the article is recomputed against the new token-cost rows for the expanded harness set, holding the same frontier-model list-prices ($2.50/M input, $10/M output) constant for comparability.
+**Plans:** 8 plans
+Plans:
+- [ ] 08-01-PLAN.md — Foundation: jsonschema dep + run_python tool + temperature kwarg in model.py and base.py
+- [ ] 08-02-PLAN.md — HTML react-derivatives: tree_of_thoughts + react_with_replan + cached_react (cell-scoped local cache)
+- [ ] 08-03-PLAN.md — Cross-task harnesses: multi_agent (isolated histories) + self_consistency (N=5 @ T=0.7)
+- [ ] 08-04-PLAN.md — Infrastructure-using harnesses: program_aided (run_python) + tool_use_with_validation (jsonschema)
+- [ ] 08-05-PLAN.md — streaming_react implementation + Ollama compatibility verification (gated checkpoint)
+- [ ] 08-06-PLAN.md — Registration + tests + analysis colors: wire all 8 into HARNESSES + HARNESSES_BY_TASK_TYPE
+- [ ] 08-07-PLAN.md — Freeze-tag move + HARNESSES_FROZEN.md update (gated checkpoint before matrix runs)
+- [ ] 08-08-PLAN.md — Article + Medium HTML refresh (gated on user-triggered matrix re-runs)
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -120,6 +145,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 5. Matrix Execution | 0/TBD | Not started | - |
 | 6. Article Polish | 0/TBD | Not started | - |
 | 7. CI Expansion + Onboarding Polish | 0/TBD | Not started | - |
+| 8. Expand Harness Family + Refresh Article | 0/8 | Not started | - |
 
 ---
 *Roadmap created: 2026-04-23*
