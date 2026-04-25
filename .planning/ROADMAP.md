@@ -127,7 +127,7 @@ Plans:
 - [x] 08-03-PLAN.md — Cross-task harnesses: multi_agent (isolated histories) + self_consistency (N=5 @ T=0.7) — `f74b886` `920cebc`
 - [x] 08-04-PLAN.md — Infrastructure-using harnesses: program_aided (run_python) + tool_use_with_validation (jsonschema) — `47307d1` `3888ac5`
 - [x] 08-05-PLAN.md — streaming_react implementation + Ollama compatibility verification (probe FAILED — OOM) — `e95355a` `fc6ff66` `19824ad`
-- [ ] 08-06-PLAN.md — Registration + tests + analysis colors: wire all 8 into HARNESSES + HARNESSES_BY_TASK_TYPE
+- [x] 08-06-PLAN.md — Registration + tests + analysis colors: wire all 8 into HARNESSES + HARNESSES_BY_TASK_TYPE — `9aa9be8` `199db9b` `2b92835`
 - [ ] 08-07-PLAN.md — Freeze-tag move + HARNESSES_FROZEN.md update (gated checkpoint before matrix runs)
 - [ ] 08-08-PLAN.md — Article + Medium HTML refresh (gated on user-triggered matrix re-runs)
 
@@ -145,7 +145,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 5. Matrix Execution | 0/TBD | Not started | - |
 | 6. Article Polish | 0/TBD | Not started | - |
 | 7. CI Expansion + Onboarding Polish | 0/TBD | Not started | - |
-| 8. Expand Harness Family + Refresh Article | 5/8 | In Progress | - |
+| 8. Expand Harness Family + Refresh Article | 6/8 | In Progress | - |
 
 ---
 *Roadmap created: 2026-04-23*

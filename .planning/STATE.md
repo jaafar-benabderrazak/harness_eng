@@ -5,15 +5,15 @@
 See: .planning/PROJECT.md (updated 2026-04-23)
 
 **Core value:** Produce concrete, reproducible evidence — numbers and annotated failure traces — that harness design dominates model choice within a tier on the same frozen model.
-**Current focus:** Phase 8 — Expand Harness Family (Wave 1 done; Wave 2 next)
+**Current focus:** Phase 8 — Expand Harness Family (Waves 1+2 done; registration done; freeze-tag move + article refresh next)
 
 ## Current Position
 
 Phase: 8 of 8 (Expand Harness Family + Refresh Article)
-Plans complete: Phase 8 — 5 of 8 with SUMMARY (08-01 foundation + 08-02 HTML react-derivatives + 08-03 cross-task harnesses + 08-04 program_aided + tool_use_with_validation + 08-05 streaming_react + Ollama verify); Phases 1-4, 7 delivered; Phase 5 deferred to user; Phase 6 blocked on Phase 5
-Status: Phase 8 Wave 1 (foundation) shippable; Wave 2 fully landed (tree_of_thoughts, react_with_replan, cached_react, multi_agent, self_consistency, program_aided, tool_use_with_validation, streaming_react); registration (08-06) and freeze-tag move (08-07) pending
+Plans complete: Phase 8 — 6 of 8 with SUMMARY (08-01 foundation + 08-02 HTML react-derivatives + 08-03 cross-task harnesses + 08-04 program_aided + tool_use_with_validation + 08-05 streaming_react + Ollama verify + 08-06 registration); Phases 1-4, 7 delivered; Phase 5 deferred to user; Phase 6 blocked on Phase 5
+Status: Phase 8 Wave 1+2+3 shippable; HARNESSES dict at 16 entries; HARNESSES_BY_TASK_TYPE: html_extract=11 (streaming_react excluded per Ollama OOM), code_gen=9; AST seals (test_harness_registry + test_model_seal) relaxed for deferred imports; HARNESS_COLORS palette at 16; pytest -q fully green (87/87); freeze-tag move (08-07) and article refresh (08-08) pending
 
-Progress: [███████████] 94% (Phase 8 underway, 5 of 8 plans complete with SUMMARY)
+Progress: [████████████] 96% (Phase 8 underway, 6 of 8 plans complete with SUMMARY)
 
 ## Completed Phases
 
@@ -41,7 +41,7 @@ Neither move invalidated any matrix runs — no matrix has been executed yet.
 
 ## Test suite state
 
-Full suite: 86/87 pass as of `bd467ae` (Plan 08-02 react-derivatives merged). The 1 failure is the pre-existing `test_model_seal` failure on `streaming_react.py` (Plan 08-05 territory, documented in deferred-items.md). Combined plan-08-02 + plan-08-03 + plan-08-04 control-flow targeted suite: 24/24 pass.
+Full suite: **87/87 pass** as of `2b92835` (Plan 08-06 registration merged). The pre-existing `test_model_seal` failure on `streaming_react.py` is NOW RESOLVED — the AST seal in both `test_model_seal.py` and `test_harness_registry.py` was relaxed to `tree.body`-scoped walks (module-level statements only), so legitimate deferred SDK imports inside method bodies pass. Combined plan-08-02 + plan-08-03 + plan-08-04 control-flow targeted suite: 24/24 pass.
 
 - Plan 08-02 added: test_tree_of_thoughts (3 tests), test_react_with_replan (2 tests), test_cached_react (3 tests including no-self-attribute structural guarantee + cross-cell isolation).
 - Plan 08-04 added: test_program_aided (3 control-flow tests: run_python-before-submit, html-task rejection, whitelist invariant), test_tool_use_with_validation (5 control-flow tests: validate-pass, validate-fail-required, unknown-tool-passes, 3-violations-yield-exhausted, valid-flow-to-submit).
@@ -73,6 +73,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 08]: Plan 08-03: multi_agent (3 isolated histories, Handoff TypedDict, UNION whitelist, single bounded retry) + self_consistency (N=5 @ T=0.7, per-field majority HTML, AST-normalized majority code returning raw winning sample) — both harnesses + 8 tests landed; HARN-09 + HARN-11 satisfied
 - [Phase 08]: Plan 08-04: program_aided (code-gen-only, whitelist={run_python, submit_answer}, emits program_aided_run_python trace event, rejects html_extract tasks cleanly) + tool_use_with_validation (both task types, jsonschema Draft202012Validator pre-built per tool from TOOL_SCHEMAS at module load, MAX_VALIDATION_RETRIES=3, new stop_reason='schema_validation_exhausted', submit_answer NOT validated by design) — both harnesses + 8 tests landed; HARN-12 + HARN-13 satisfied
 - [Phase 08]: Plan 08-05: streaming_react harness (Anthropic content_block_start sniff + Ollama per-chunk message.tool_calls aggregation, deferred SDK imports inside method bodies for AST-seal compliance) + scripts/verify_streaming_ollama.py probe + 08-05-VERIFY.md outcome doc; Ollama probe outcome **FAIL** (OOM: glm-4.7-flash needs 23.4 GiB, host has 6.9 GiB — failure mode differs from predicted Ollama issue #13840 post-tool-call halt, but the registration implication is identical); plan 08-06 will register streaming_react with task_type=[]; HARN-14 satisfied
+- [Phase 08]: Plan 08-06: registration of all 8 Phase 8 harnesses into HARNESSES (16 total) + HARNESSES_BY_TASK_TYPE (html_extract=11, code_gen=9; streaming_react excluded via dynamic _streaming_ok() reading 08-05-VERIFY.md outcome FAIL at import time); AST seal relaxation in BOTH test_harness_registry.py and test_model_seal.py via tree.body-scoped walk (module-level imports only — deferred imports inside FunctionDef bodies tolerated); EXPECTED tool-allowlist dict extended with 8 new entries; HARNESS_COLORS palette extended to 16 entries with distinguishable hues; REQUIREMENTS.md updated with HARN-08..15 + BENCH-06 + RUN-07 + ANAL-06 marked complete + ART-05 pending; full pytest suite 87/87 GREEN; auto-fix Rule 1: test_code_gen_harness_lineup widened from len==5 to set-equality with the 9 designed Phase 8 code_gen members; HARN-08..15, BENCH-06, RUN-07, ANAL-06 satisfied
 
 ### Blockers/Concerns
 
@@ -82,5 +83,5 @@ Decisions are logged in PROJECT.md Key Decisions table.
 ## Session Continuity
 
 Last session: 2026-04-25
-Stopped at: Completed 08-05-PLAN.md (streaming_react + Ollama verify). Three commits: `e95355a` (harness + tests), `fc6ff66` (verify script), `19824ad` (probe outcome). Probe ran in 4.5s, FAILED with OOM (glm-4.7-flash declared 23.4 GiB working set, host has 6.9 GiB available). 08-05-VERIFY.md captures the outcome. Plan 08-06's registration policy for streaming_react is deterministic now: task_type=[]. Pre-existing AST seal failure on streaming_react.py remains — plan 08-06's responsibility to relax the seal.
-Resume hook: Plan 08-06 (registration) wires all Wave-2 harnesses (tree_of_thoughts, react_with_replan, cached_react, multi_agent, self_consistency, program_aided, tool_use_with_validation, streaming_react) into HARNESSES + HARNESSES_BY_TASK_TYPE; streaming_react gets task_type=[] per 08-05-VERIFY.md; AST seal in tests/test_harness_registry.py needs relaxation for deferred imports inside method bodies; bulk-adds HARN-08..15 rows to REQUIREMENTS.md and checks off HARN-08..15 (HARN-14 already complete from 08-05). Plan 08-07 (freeze-tag move) must still wait for 08-06 to land.
+Stopped at: Completed 08-06-PLAN.md (registration + AST seal relaxation + palette). Three commits: `9aa9be8` (registry update with conditional streaming_react), `199db9b` (test invariants for 16 harnesses + AST seal relaxation in BOTH seal tests + auto-fix on test_code_gen_harness_lineup), `2b92835` (HARNESS_COLORS palette extended to 16). Full pytest suite 87/87 GREEN. REQUIREMENTS.md gained 11 new rows (HARN-08..15, BENCH-06, RUN-07, ANAL-06, ART-05); 10 marked Complete, ART-05 still Pending until 08-08. Pre-existing test_model_seal RED on streaming_react resolved.
+Resume hook: Plan 08-07 (freeze-tag move). Now that all gated files diverge from `harnesses-frozen` (tools.py with run_python from 08-01; harnesses/__init__.py with the 16-harness registry from 08-06; 8 new harness files; the runner pre-flight check_freeze_gate refuses to run against the old tag), the freeze tag must move forward to current HEAD with HARNESSES_FROZEN.md log entry recording the per-file SHAs at the move point and the reason "Phase 8 harness expansion." Plan 08-08 (article refresh) follows after the matrix re-runs against the expanded 16-harness registry.
