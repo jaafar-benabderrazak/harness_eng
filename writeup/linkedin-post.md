@@ -6,36 +6,46 @@ LinkedIn shows the image picker. ~1,800 chars; under the 3,000 hard limit.
 Long-form companion (LinkedIn Pulse / Medium import): writeup/linkedin-article.md
 -->
 
-I benchmarked 8 agent frameworks against the same model.
+Why your eval harness needs a single-shot baseline
 
-Most of them lost to 15 lines of code that just dump the input into a single prompt.
+Most teams building LLM apps reach for an agent framework first. I benchmarked 8 popular ones against a 15-line single-shot script. The script kept winning.
 
-The default ReAct loop (the entrypoint shipping in LangChain, LangGraph, CrewAI, and most agent tutorials) scored 2 out of 15 on messy HTML extraction.
+Starting with a baseline isn't best-practice ceremony. It's the cheapest way to find out whether your fancy framework is buying anything.
 
-A single_shot baseline (no framework, one API call, no retry, no agent loop) scored 9 out of 15. In one quarter the wall-clock. At roughly one tenth the per-task cost at frontier-model list prices.
+The numbers
 
-A few findings I didn't expect:
+Same frozen model, same tasks, same grader. Tested: LangChain, LangGraph, CrewAI, and several smaller patterns from the literature.
 
-→ In one run, plan-and-execute fired the same non-existent CSS selector 417 times across 75 cells. The planner invented it. The executor had no feedback path.
+Accuracy on messy HTML extraction: the single-shot baseline scored 9/15. The standard ReAct loop (the default in most agent tutorials) scored 2/15.
 
-→ Same matrix run twice on the same model at temperature 0, and middle-of-the-pack rankings swung by 0.33 between the two runs. seeds=1 evals are a coin flip.
+Speed: the baseline ran about 4x faster on wall-clock.
 
-→ At ~$2.50/M input + $10/M output, the elaborate plan-execute agent costs about $140k/year more than the baseline at 10k tasks/day. For a worse success rate.
+Cost: at frontier-model list prices, the baseline cost roughly 1/10th per task compared to the elaborate agent loops.
 
-→ On easy code-gen tasks (textbook algorithms with deterministic graders), every harness scored 15/15. The matrix collapsed from "which works?" to "which is wasteful?". chain_of_thought used 2x the wall-clock. test_driven used 6x the input tokens. Same accuracy.
+Three things I didn't expect
 
-The honest claim: harness complexity pays returns only when your model's first-shot accuracy is below target AND the failures are multi-turn-recoverable. Both rarely hold at once on weak models.
+Hallucination at scale. A plan-and-execute agent fired the same non-existent CSS selector 417 times in a single run. The planner invented the selector. The executor had no way to tell the planner it didn't exist.
 
-Monday action: add a 15-line single_shot baseline to your eval harness. Make it the first row in your results table. If your production agent (whatever framework it's built on) doesn't beat that baseline by more than 10%, rip out the production agent.
+Variance even at temperature 0. Two runs of the same matrix produced middle-of-the-pack rankings that swung by 0.33 between the runs. seeds=1 evals are a coin flip.
 
-Most of the ceremony around modern agents is paid for a problem the model already solved in one call.
+On easy tasks the spread is all cost. For textbook algorithms with deterministic graders, every framework hit 15/15. The only differentiator was the bill: some test-driven patterns used 6x the input tokens to reach the same answer.
 
-Full writeup with charts, the 8 cataloged patterns I haven't benchmarked yet, and the cross-experiment lesson:
-https://jaafarbenabderrazak.com/blog/agent-frameworks-benchmark
+What to do with this
 
-Source code, runner, fixtures, and the reproducible 150-run matrix:
-https://github.com/jaafar-benabderrazak/harness-bench
+1. Add a 15-line single_shot baseline to your eval harness. Make it row zero of your results table.
+
+2. If your production agent doesn't beat that baseline by more than 10%, simplify the stack. Latency and cost both drop.
+
+3. Harness complexity pays returns only when first-shot accuracy is below target AND the failures are recoverable through extra turns. Both rarely hold at once on weak models.
+
+None of this is anti-agent. It's pro-measurement: complexity should buy you something, and right now most of it isn't.
+
+Full breakdown with charts and methodology:
+🔗 https://jaafarbenabderrazak.com/blog/agent-frameworks-benchmark
+
+Source code and reproducible 150-run matrix:
+🔗 https://github.com/jaafar-benabderrazak/harness-bench
 
 What's the simplest baseline you've never bothered to measure?
 
-#AgentEngineering #LLMOps #SoftwareEngineering #AIAgents
+#SoftwareEngineering #LLMOps #AIArchitecture #AIBenchmarking #AgenticWorkflows
