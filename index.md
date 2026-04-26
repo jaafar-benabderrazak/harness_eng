@@ -5,13 +5,13 @@ title: harness_eng
 
 # harness_eng
 
-**Same model, sixteen harnesses, two tasks.** A controlled experiment that holds one LLM constant and varies only the agent harness around it. Two task types (HTML extraction + Python code generation). **Eight harnesses benchmarked end-to-end** (150 graded runs producing the published numbers); **eight more cataloged** in Phase 8 — every common agent pattern named, mapped to its real-world framework analog, implemented + unit-tested against freeze tag `2af30fc`, matrix re-run gated on hardware (the configured model needs more memory than this host has). One consistent methodology lesson on the benchmarked half; a structured catalog on the cataloged half so a reader can map the design space without waiting for the rerun.
+**Same model, sixteen harnesses, two tasks.** A controlled experiment that holds one LLM constant and varies only the agent harness around it. Two task types (HTML extraction + Python code generation). **Eight harnesses benchmarked end-to-end** (150 graded runs producing the published numbers); **eight more cataloged** in Phase 8, every common agent pattern named, mapped to its real-world framework analog, implemented + unit-tested against freeze tag `2af30fc`, matrix re-run gated on hardware (the configured model needs more memory than this host has). One consistent methodology lesson on the benchmarked half; a structured catalog on the cataloged half so a reader can map the design space without waiting for the rerun.
 
 ## Read the writeup
 
-**[→ Full combined article](writeup/article.html)** — one page, both experiments, detailed per-harness breakdowns with framework analogs (LangChain / LangGraph / CrewAI / Aider / Cursor), forensics behind `<details>` toggles, Mermaid diagrams, dollar extrapolation at frontier-model list prices, and a cross-experiment conclusion.
+**[→ Full combined article](writeup/article.html)**, one page, both experiments, detailed per-harness breakdowns with framework analogs (LangChain / LangGraph / CrewAI / Aider / Cursor), forensics behind `<details>` toggles, Mermaid diagrams, dollar extrapolation at frontier-model list prices, and a cross-experiment conclusion.
 
-**[→ Medium-ready HTML version](writeup/article-medium.html)** — same content rendered as clean HTML (no Mermaid, no collapsibles), suitable for import into Medium, Substack, or any editor that accepts HTML paste.
+**[→ Medium-ready HTML version](writeup/article-medium.html)**, same content rendered as clean HTML (no Mermaid, no collapsibles), suitable for import into Medium, Substack, or any editor that accepts HTML paste.
 
 ## The one-line finding
 
@@ -50,7 +50,7 @@ python scripts/run_full.py --seeds 3 --yes
 # Code generation (~25-35 min)
 python scripts/run_code_benchmark.py --seeds 3 --yes
 
-# Post-process — produces CSV, charts, trace viewer, article
+# Post-process, produces CSV, charts, trace viewer, article
 python scripts/make_chart.py
 ```
 

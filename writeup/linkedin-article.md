@@ -1,4 +1,4 @@
-# I benchmarked 8 agent frameworks — ReAct scored 2/15, the no-framework baseline scored 9/15
+# I benchmarked 8 agent frameworks. ReAct scored 2/15. The no-framework baseline scored 9/15
 
 ![Same model, sixteen harnesses, two tasks](thumbnail.png)
 
@@ -38,7 +38,7 @@ Pull 3–5 structured fields (brand, price, title, date) from 5 messy HTML pages
 | reflexion     | 3/15       | 977 s            |
 | react         | 2/15       | ~220 s           |
 
-`single_shot` and `minimal` tied for best accuracy. `single_shot` got there in under 4 minutes. `plan_execute` spent 27 minutes for a *worse* score. The default ReAct loop — the one shipping as the entrypoint in most frameworks — scored 2/15.
+`single_shot` and `minimal` tied for best accuracy. `single_shot` got there in under 4 minutes. `plan_execute` spent 27 minutes for a *worse* score. The default ReAct loop, the one shipping as the entrypoint in most frameworks, scored 2/15.
 
 Every complex harness had the same failure mode: they needed the model to do the right thing multiple turns in a row, and the model drifted.
 
@@ -55,7 +55,7 @@ At frontier-model list prices (roughly $2.50/M input, $10/M output):
 - `single_shot`: ~$0.0045 per HTML extraction
 - `plan_execute`: ~$0.045 per HTML extraction
 
-**10× the cost per task for a lower success rate.** At 10,000 tasks/day, that's about **$140k/year** of ceremony — paid for an agent that gets the answer less often than the baseline.
+**10× the cost per task for a lower success rate.** At 10,000 tasks/day, that's about **$140k/year** of ceremony, paid for an agent that gets the answer less often than the baseline.
 
 ### The variance finding nobody publishes
 
@@ -69,7 +69,7 @@ I ran the same matrix twice on the same frozen model at temperature 0. Middle-of
 | reflexion    | 0.47  | 0.20  |
 | react        | 0.13  | 0.40  |
 
-The *approximate tiers* stay stable — `single_shot` near the top, `reflexion` near the bottom. But exact middle orderings aren't reliable at N=15, even deterministic. Multi-turn tool loops branch on stochasticity at every turn. A one-shot call has exactly one branch point.
+The *approximate tiers* stay stable, `single_shot` near the top, `reflexion` near the bottom. But exact middle orderings aren't reliable at N=15, even deterministic. Multi-turn tool loops branch on stochasticity at every turn. A one-shot call has exactly one branch point.
 
 If you're publishing a harness comparison at seeds=1, you're publishing a flip of a coin.
 
@@ -89,9 +89,9 @@ Implement 5 Python functions (fizzbuzz, fibonacci, is_anagram, binary_search, wo
 | test_driven      | 478 s      | **35,469**   |
 | chain_of_thought | **598 s**  | 6,573        |
 
-`chain_of_thought` took 2× the wall-clock for the same result — "think step by step" is just tokens the model has to generate before getting to the answer it already had. `test_driven` used **6× the input tokens** of any other harness, because every `run_tests` call feeds the full pytest output back into the model's context.
+`chain_of_thought` took 2× the wall-clock for the same result, "think step by step" is just tokens the model has to generate before getting to the answer it already had. `test_driven` used **6× the input tokens** of any other harness, because every `run_tests` call feeds the full pytest output back into the model's context.
 
-Going in, I expected `retry_on_fail` to justify itself by rescuing a failed first attempt. It didn't — because no first attempts failed. The insurance was never needed.
+Going in, I expected `retry_on_fail` to justify itself by rescuing a failed first attempt. It didn't, because no first attempts failed. The insurance was never needed.
 
 This isn't an argument against test-driven or retry patterns in general. On tasks where the first attempt has a realistic failure probability, those patterns earn their tokens. On textbook algorithms this model already knows by heart, they're pure overhead.
 
@@ -101,8 +101,8 @@ This isn't an argument against test-driven or retry patterns in general. On task
 
 I won't pretend complexity is always wrong. The conditions where `test_driven`, `reflexion`, or `plan_execute` earn their cost:
 
-- **First-shot accuracy is genuinely below target** — if your baseline hits 95%, no retry loop will help. If it hits 40%, every extra turn is a real chance to climb.
-- **Failures are structurally recoverable** — the model needs a signal it can actually act on (a concrete test failure, a visible schema mismatch). If your multi-turn loop feeds the model "NO_MATCH" on CSS selectors for 12 turns, you're not recovering anything; you're paying to fail more elaborately.
+- **First-shot accuracy is genuinely below target.** If your baseline hits 95%, no retry loop will help. If it hits 40%, every extra turn is a real chance to climb.
+- **Failures are structurally recoverable.** The model needs a signal it can actually act on (a concrete test failure, a visible schema mismatch). If your multi-turn loop feeds the model "NO_MATCH" on CSS selectors for 12 turns, you're not recovering anything; you're paying to fail more elaborately.
 - **The base model's multi-turn tool-use reliability exceeds ~90% per turn.** Below that, each extra turn multiplies the odds of SDK-boundary errors. On weak models, complexity accelerates failure.
 
 On a stronger model (Claude Sonnet, GPT-4o, Gemini), all three conditions plausibly hold and `test_driven`-style loops probably do pay. On a weak local model, none of them do.
@@ -123,7 +123,7 @@ Know which regime you're in before picking a harness.
 
 ## Your Monday action
 
-Before your next sprint, add one 15-line `single_shot` baseline to your eval harness. Make it the first row in your results table. If your production agent — whatever framework it's built on — doesn't beat it by more than 10%, rip out the production agent.
+Before your next sprint, add one 15-line `single_shot` baseline to your eval harness. Make it the first row in your results table. If your production agent, whatever framework it's built on, doesn't beat it by more than 10%, rip out the production agent.
 
 Most of the ceremony around modern agents is paid for a problem the model already solved in one call.
 
