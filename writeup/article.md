@@ -22,6 +22,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 *A controlled experiment on agent harness design. One frozen open-source model. Two task types. **Eight harnesses benchmarked end-to-end** — 150 graded runs producing the numbers in Part 1 and Part 2 below. **Eight more harnesses cataloged** as a structured map of every common agent pattern (Tree of Thoughts, multi-agent, self-consistency, Program-Aided Language models, schema-validated tool dispatch, streaming early-termination, in-cell memoization, loop-detection-and-recovery), each mapped to its real-world framework analog and implemented in code with full unit-test coverage; the matrix re-run for these eight is gated on stronger hardware than the open-source model can fit on the host used here. Source, code, and reproducible runner: [github.com/jaafar-benabderrazak/harness-bench](https://github.com/jaafar-benabderrazak/harness-bench).*
 
+![Same model, sixteen harnesses, two tasks — editorial map: a central frozen model (glm-4.7-flash) with eight benchmarked harnesses on the left (green shards) and eight cataloged harnesses on the right (gold shards), feeding into two tasks at the bottom — HTML extraction and code generation, 75 graded cells each.](thumbnail.png)
+
 ---
 
 ## What this is, in one diagram
