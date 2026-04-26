@@ -30,7 +30,10 @@ Monday action: add a 15-line single_shot baseline to your eval harness. Make it 
 
 Most of the ceremony around modern agents is paid for a problem the model already solved in one call.
 
-Full writeup with charts, the 8 cataloged patterns I haven't benchmarked yet, and the reproducible 150-run matrix:
+Full writeup with charts, the 8 cataloged patterns I haven't benchmarked yet, and the cross-experiment lesson:
+https://jaafarbenabderrazak.com/blog/agent-frameworks-benchmark
+
+Source code, runner, fixtures, and the reproducible 150-run matrix:
 github.com/jaafar-benabderrazak/harness-bench
 
 What's the simplest baseline you've never bothered to measure?
